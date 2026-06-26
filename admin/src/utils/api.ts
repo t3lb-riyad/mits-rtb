@@ -13,7 +13,7 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API}${endpoint}`, { ...options, headers: { ...headers, ...options?.headers } });
   if (res.status === 401) {
     localStorage.removeItem('admin_token');
-    window.location.href = '/admin';
+    window.location.href = '/';
     throw new Error('Session expired');
   }
   if (!res.ok) {
