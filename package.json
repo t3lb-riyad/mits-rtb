@@ -1,0 +1,17 @@
+{
+  "name": "mits-rtb",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LA MAISON CD - Enterprise E-Commerce & ERP Order Management System",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install && cd ../admin && npm install",
+    "dev:backend": "cd backend && node server.js",
+    "dev:frontend": "cd frontend && npx vite",
+    "dev:admin": "cd admin && npx vite",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:admin\"",
+    "start": "cd backend && node server.js"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
