@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
 import { useCart } from '../context/CartContext';
-import { api, Product, Category } from '../utils/api';
+import { api, resolveImageUrl, Product, Category } from '../utils/api';
 
 const BEST_OF_OPTIONS = ['study', 'work', 'gaming'] as const;
 
@@ -156,7 +156,7 @@ export default function HomePage() {
                   <Link to={`/product/${product.slug}`}>
                     <div className="bg-light rounded-sm h-48 flex items-center justify-center mb-4 overflow-hidden">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="h-full w-full object-contain p-2" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2" />
                       ) : (
                         <span className="text-4xl text-primary group-hover:text-[#3D1534] font-bold">{product.name.charAt(0)}</span>
                       )}
@@ -233,7 +233,7 @@ export default function HomePage() {
                   <Link to={`/product/${product.slug}`}>
                     <div className="bg-white rounded-sm h-48 flex items-center justify-center mb-4 border border-gray-100 overflow-hidden">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="h-full w-full object-contain p-2" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2" />
                       ) : (
                         <span className="text-4xl text-primary group-hover:text-[#3D1534] font-bold">{product.name.charAt(0)}</span>
                       )}

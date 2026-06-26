@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useTranslation } from '../i18n/LanguageContext';
-import { api } from '../utils/api';
+import { api, resolveImageUrl } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
   'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira',

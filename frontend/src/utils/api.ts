@@ -1,4 +1,11 @@
-const API_BASE = 'https://mits-rtb-backend.onrender.com/api';
+export const API_BASE = process.env.VITE_API_BASE || 'https://mits-rtb-backend.onrender.com/api';
+
+export function resolveImageUrl(url: string): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = API_BASE.replace(/\/api$/, '');
+  return base + (url.startsWith('/') ? url : '/' + url);
+}
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {

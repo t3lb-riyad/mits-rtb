@@ -3,18 +3,13 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const { prepare, transaction, saveDb } = require('../models/database');
 const { authenticateToken, generateToken } = require('../middleware/auth');
 const { calculateProfit } = require('../utils/helpers');
+const { uploadImage } = require('../utils/storage');
 
-const uploadsDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname))
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 router.post('/login', (req, res) => {
@@ -41,10 +36,11 @@ router.post('/setup', (req, res) => {
 
 router.use(authenticateToken);
 
-router.post('/upload', upload.single('file'), (req, res) => {
+router.post('/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
-    res.json({ url: '/uploads/' + req.file.filename });
+    const url = await uploadImage(req.file.buffer, req.file.originalname, req.file.mimetype);
+    res.json({ url });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { initDatabase, prepare, exec } = require('./models/database');
+const { IMGBB_API_KEY } = require('./utils/storage');
 
 let app, server;
 
@@ -25,7 +26,9 @@ async function start() {
     credentials: true
   }));
   app.use(express.json({ limit: '50mb' }));
-  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  if (!IMGBB_API_KEY) {
+    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+  }
 
   app.use('/api', apiLimiter);
   app.use('/api/products', productsRouter);

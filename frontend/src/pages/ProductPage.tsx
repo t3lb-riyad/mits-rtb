@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
 import { useCart } from '../context/CartContext';
-import { api, Product, ProductAttribute } from '../utils/api';
+import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
   'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Biskra', 'Béchar',
@@ -119,7 +119,7 @@ export default function ProductPage() {
       productId: product.id,
       productName: product.name,
       productSlug: product.slug,
-      productImage: product.image_url || '',
+      productImage: resolveImageUrl(product.image_url || ''),
       quantity,
       unitPrice,
       selectedRam: selectedAttrs['RAM'] || '',
@@ -224,7 +224,7 @@ export default function ProductPage() {
               const parsed = product.image_urls ? JSON.parse(product.image_urls) : [];
               if (Array.isArray(parsed)) parsed.forEach((u: string) => { if (!galleryImages.includes(u)) galleryImages.push(u); });
             } catch {}
-            const current = galleryImages[selectedImage] || product.image_url;
+            const current = resolveImageUrl(galleryImages[selectedImage] || product.image_url);
             return (
               <div>
                 <div className="bg-light rounded-sm h-60 sm:h-80 flex items-center justify-center mb-3 overflow-hidden">
@@ -242,7 +242,7 @@ export default function ProductPage() {
                           selectedImage === i ? 'border-primary' : 'border-gray-200 hover:border-gray-400'
                         }`}
                       >
-                        <img src={url} alt={`${product.name} ${i}`} className="w-full h-full object-cover" />
+                        <img src={resolveImageUrl(url)} alt={`${product.name} ${i}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>

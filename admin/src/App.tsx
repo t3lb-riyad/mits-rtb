@@ -547,17 +547,23 @@ function CustomerDetailView({ customerId, onBack }: { customerId: number; onBack
 }
 
 /* =================== PRODUCTS =================== */
+const API_BASE = '/api';
 const uploadFile = async (file: File): Promise<string> => {
   const token = localStorage.getItem('admin_token');
   const fd = new FormData();
   fd.append('file', file);
-  const res = await fetch('/api/admin/upload', {
+  const res = await fetch(API_BASE + '/admin/upload', {
     method: 'POST',
     headers: token ? { 'Authorization': 'Bearer ' + token } : {},
     body: fd
   });
   if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
-  return (await res.json()).url;
+  const { url } = await res.json();
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/') && typeof window !== 'undefined') {
+    return window.location.origin + url;
+  }
+  return url;
 };
 
 const RAM_OPTIONS = ['2GB', '4GB', '8GB', '16GB', '18GB', '24GB', '32GB', '36GB', '64GB', '128GB'];
