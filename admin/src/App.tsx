@@ -668,6 +668,14 @@ function ProductsPage() {
     } catch (err: any) { alert(err.message); }
   };
 
+  const handleDeleteProduct = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    try {
+      await adminApi.del('/products/' + id);
+      setProducts(prev => prev.filter(p => p.id !== id));
+    } catch (err: any) { alert(err.message); }
+  };
+
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -867,7 +875,10 @@ function ProductsPage() {
                 <td className="px-4 py-3">{p.order_count || 0}</td>
                 <td className="px-4 py-3">{p.best_of || '-'}</td>
                 <td className="px-4 py-3">
-                  <button onClick={() => { setEditingProduct({ ...p, image_urls: p.image_urls ? JSON.parse(p.image_urls) : [] }); loadEditAttrs(p.id); }} className="text-primary text-xs font-medium hover:underline">Edit</button>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => { setEditingProduct({ ...p, image_urls: p.image_urls ? JSON.parse(p.image_urls) : [] }); loadEditAttrs(p.id); }} className="text-primary text-xs font-medium hover:underline">Edit</button>
+                    <button onClick={() => handleDeleteProduct(p.id, p.name)} className="text-red-600 text-xs font-medium hover:underline" title="Delete product">Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}

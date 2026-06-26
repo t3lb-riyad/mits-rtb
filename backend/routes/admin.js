@@ -280,6 +280,17 @@ router.put('/products/:id', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.delete('/products/:id', (req, res) => {
+  try {
+    const product = prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    if (!product) return res.status(404).json({ error: 'Product not found.' });
+    prepare('UPDATE product_offers SET is_active = 0 WHERE product_id = ?').run(req.params.id);
+    prepare('DELETE FROM product_attributes WHERE product_id = ?').run(req.params.id);
+    prepare('UPDATE products SET is_active = 0 WHERE id = ?').run(req.params.id);
+    res.json({ success: true, message: 'Product deactivated.' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.get('/products/:id/attributes', (req, res) => {
   try {
     const attrs = prepare('SELECT * FROM product_attributes WHERE product_id = ? ORDER BY attribute_name, attribute_value').all(req.params.id);
