@@ -435,11 +435,11 @@ export default function ProductPage() {
             )}
             <div className="flex gap-3">
               <button type="button" onClick={handleAddToCart} disabled={product.stock_quantity === 0}
-                className="flex-1 text-center py-3 px-4 text-sm font-bold uppercase tracking-wider text-primary bg-white border-2 border-primary hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                className="flex-1 text-center py-3 px-4 text-sm font-bold uppercase tracking-wider text-white bg-primary border-2 border-primary hover:bg-white hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {product.stock_quantity === 0 ? t('product.out_of_stock') : t('product.add_to_cart')}
               </button>
               <button type="submit" disabled={submitting || product.stock_quantity === 0}
-                className="flex-1 text-center py-3 px-4 text-sm font-bold uppercase tracking-wider text-white bg-primary hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                className="flex-1 text-center py-3 px-4 text-sm font-bold uppercase tracking-wider text-primary bg-white border-2 border-primary hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 {submitting ? t('product.processing') : t('product.place_order')}
               </button>
             </div>
