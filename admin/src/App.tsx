@@ -547,24 +547,6 @@ function CustomerDetailView({ customerId, onBack }: { customerId: number; onBack
 }
 
 /* =================== PRODUCTS =================== */
-const uploadFile = async (file: File): Promise<string> => {
-  const token = localStorage.getItem('admin_token');
-  const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch(API_BASE + '/admin/upload', {
-    method: 'POST',
-    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
-    body: fd
-  });
-  if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
-  const { url } = await res.json();
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/') && typeof window !== 'undefined') {
-    return window.location.origin + url;
-  }
-  return url;
-};
-
 const RAM_OPTIONS = ['2GB', '4GB', '8GB', '16GB', '18GB', '24GB', '32GB', '36GB', '64GB', '128GB'];
 const STORAGE_OPTIONS = ['128GB SSD', '256GB SSD', '512GB SSD', '1TB SSD', '2TB SSD', '4TB SSD'];
 const HDD_OPTIONS = ['500GB HDD', '1TB HDD', '2TB HDD'];
@@ -590,7 +572,6 @@ function ProductsPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [uploading, setUploading] = useState(false);
   const [productAttrs, setProductAttrs] = useState<{ attribute_name: string; attribute_value: string; price_modifier: number }[]>([]);
   const [editAttrs, setEditAttrs] = useState<{ attribute_name: string; attribute_value: string; price_modifier: number }[]>([]);
   const [editBrandNewName, setEditBrandNewName] = useState('');
@@ -602,33 +583,35 @@ function ProductsPage() {
   };
   useEffect(load, []);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'create' | 'edit') => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'create' | 'edit') => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    try {
-      const url = await uploadFile(file);
-      if (target === 'create') setForm(p => ({ ...p, image_url: url }));
-      else setEditingProduct((p: any) => ({ ...p, image_url: url }));
-    } catch (err: any) { alert(err.message); }
-    setUploading(false);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      if (target === 'create') setForm(p => ({ ...p, image_url: dataUrl }));
+      else setEditingProduct((p: any) => ({ ...p, image_url: dataUrl }));
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>, target: 'create' | 'edit') => {
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>, target: 'create' | 'edit') => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    setUploading(true);
-    try {
-      const urls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const url = await uploadFile(files[i]);
-        urls.push(url);
-      }
-      if (target === 'create') setForm(p => ({ ...p, image_urls: [...p.image_urls, ...urls] }));
-      else setEditingProduct((p: any) => ({ ...p, image_urls: [...(p.image_urls || []), ...urls] }));
-    } catch (err: any) { alert(err.message); }
-    setUploading(false);
-    e.target.value = '';
+    let index = 0;
+    const readNext = () => {
+      if (index >= files.length) { e.target.value = ''; return; }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        if (target === 'create') setForm(p => ({ ...p, image_urls: [...p.image_urls, dataUrl] }));
+        else setEditingProduct((p: any) => ({ ...p, image_urls: [...(p.image_urls || []), dataUrl] }));
+        index++;
+        readNext();
+      };
+      reader.readAsDataURL(files[index]);
+    };
+    readNext();
   };
 
   const removeGalleryImage = (target: 'create' | 'edit', index: number) => {
@@ -818,8 +801,7 @@ function ProductsPage() {
             <div className="sm:col-span-3">
               <label className="block text-xs font-medium text-gray-600 mb-1">Main Image (Thumbnail)</label>
               <div className="flex items-center gap-3">
-                <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'create')} className="text-sm" disabled={uploading} />
-                {uploading && <span className="text-xs text-gray-500">Uploading...</span>}
+                <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'create')} className="text-sm" />
               </div>
               {form.image_url && (
                 <div className="mt-2">
@@ -830,8 +812,7 @@ function ProductsPage() {
             <div className="sm:col-span-3">
               <label className="block text-xs font-medium text-gray-600 mb-1">Gallery Images (optional)</label>
               <div className="flex items-center gap-3">
-                <input type="file" accept="image/*" multiple onChange={e => handleGalleryUpload(e, 'create')} className="text-sm" disabled={uploading} />
-                {uploading && <span className="text-xs text-gray-500">Uploading...</span>}
+                <input type="file" accept="image/*" multiple onChange={e => handleGalleryUpload(e, 'create')} className="text-sm" />
               </div>
               {form.image_urls.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
@@ -979,8 +960,7 @@ function ProductsPage() {
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Main Image (Thumbnail)</label>
                 <div className="flex items-center gap-3">
-                  <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'edit')} className="text-sm" disabled={uploading} />
-                  {uploading && <span className="text-xs text-gray-500">Uploading...</span>}
+                  <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'edit')} className="text-sm" />
                 </div>
                 {editingProduct.image_url && (
                   <div className="mt-2">
@@ -991,8 +971,7 @@ function ProductsPage() {
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Gallery Images (optional)</label>
                 <div className="flex items-center gap-3">
-                  <input type="file" accept="image/*" multiple onChange={e => handleGalleryUpload(e, 'edit')} className="text-sm" disabled={uploading} />
-                  {uploading && <span className="text-xs text-gray-500">Uploading...</span>}
+                  <input type="file" accept="image/*" multiple onChange={e => handleGalleryUpload(e, 'edit')} className="text-sm" />
                 </div>
                 {editingProduct.image_urls && editingProduct.image_urls.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">

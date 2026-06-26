@@ -2,7 +2,7 @@ export const API_BASE = import.meta.env.VITE_API_BASE || 'https://mits-rtb-backe
 
 export function resolveImageUrl(url: string): string {
   if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
   const base = API_BASE.replace(/\/api$/, '');
   return base + (url.startsWith('/') ? url : '/' + url);
 }

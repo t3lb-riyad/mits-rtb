@@ -12,6 +12,29 @@ const { uploadImage } = require('../utils/storage');
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
+async function processImageUrl(imageUrl) {
+  if (!imageUrl) return null;
+  if (typeof imageUrl === 'string' && imageUrl.startsWith('data:')) {
+    const matches = imageUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!matches) return null;
+    const mimetype = matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    const ext = mimetype.split('/')[1] || 'jpg';
+    return await uploadImage(buffer, `image.${ext}`, mimetype);
+  }
+  return imageUrl;
+}
+
+async function processImageUrls(imageUrlsJson) {
+  if (!imageUrlsJson) return null;
+  try {
+    const urls = JSON.parse(imageUrlsJson);
+    if (!Array.isArray(urls)) return imageUrlsJson;
+    const processed = await Promise.all(urls.map(u => processImageUrl(u)));
+    return JSON.stringify(processed.filter(Boolean));
+  } catch { return imageUrlsJson; }
+}
+
 router.post('/login', (req, res) => {
   try {
     const { username, password } = req.body;
@@ -242,14 +265,16 @@ router.get('/products', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/products', (req, res) => {
+router.post('/products', async (req, res) => {
   try {
     const { name, slug, description, short_description, category_id, brand_id, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, low_stock_threshold, best_of, image_url, image_urls, attributes, product_attributes } = req.body;
     if (!name || !slug || !base_price) return res.status(400).json({ error: 'Name, slug, and base price are required.' });
+    const finalImageUrl = await processImageUrl(image_url);
+    const finalImageUrls = await processImageUrls(image_urls);
     const result = prepare(`INSERT INTO products (name, slug, description, short_description, category_id, brand_id, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, low_stock_threshold, best_of, image_url, image_urls, attributes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
       name, slug, description || null, short_description || null, category_id || null, brand_id || null, base_price,
       cost_price || 0, shipping_cost || 0, ad_cost || 0, overhead_cost || 0,
-      stock_quantity || 0, low_stock_threshold || 10, best_of || null, image_url || null, image_urls || null, attributes || null);
+      stock_quantity || 0, low_stock_threshold || 10, best_of || null, finalImageUrl, finalImageUrls, attributes || null);
     const productId = result.lastInsertRowid;
     if (product_attributes && Array.isArray(product_attributes)) {
       product_attributes.forEach(a => {
@@ -260,8 +285,14 @@ router.post('/products', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/products/:id', (req, res) => {
+router.put('/products/:id', async (req, res) => {
   try {
+    if (req.body.image_url && typeof req.body.image_url === 'string' && req.body.image_url.startsWith('data:')) {
+      req.body.image_url = await processImageUrl(req.body.image_url);
+    }
+    if (req.body.image_urls && typeof req.body.image_urls === 'string' && req.body.image_urls.includes('data:')) {
+      req.body.image_urls = await processImageUrls(req.body.image_urls);
+    }
     const fields = []; const params = [];
     const allowed = ['name', 'slug', 'description', 'short_description', 'category_id', 'brand_id', 'base_price', 'cost_price', 'shipping_cost', 'ad_cost', 'overhead_cost', 'stock_quantity', 'low_stock_threshold', 'best_of', 'is_active', 'image_url', 'image_urls', 'attributes'];
     allowed.forEach(f => { if (req.body[f] !== undefined) { fields.push(`${f} = ?`); params.push(req.body[f]); } });
