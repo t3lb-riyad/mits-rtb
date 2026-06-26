@@ -178,7 +178,7 @@ export default function HomePage() {
                         productId: product.id, productName: product.name, productSlug: product.slug,
                         productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
                         selectedRam: '', selectedStorage: '',
-                      })} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
+                      })} className="flex-1 bg-white text-primary border-2 border-primary text-sm font-medium py-2 rounded hover:bg-primary hover:text-white transition-colors">
                         {t('product.add_to_cart')}
                       </button>
                       <button onClick={() => {
@@ -257,7 +257,7 @@ export default function HomePage() {
                         productId: product.id, productName: product.name, productSlug: product.slug,
                         productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
                         selectedRam: '', selectedStorage: '',
-                      })} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
+                      })} className="flex-1 bg-white text-primary border-2 border-primary text-sm font-medium py-2 rounded hover:bg-primary hover:text-white transition-colors">
                         {t('product.add_to_cart')}
                       </button>
                       <button onClick={() => {
