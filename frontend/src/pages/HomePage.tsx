@@ -177,7 +177,7 @@ export default function HomePage() {
                       <button onClick={() => addItem({
                         productId: product.id, productName: product.name, productSlug: product.slug,
                         productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                        selectedRam: '', selectedStorage: '',
+                        selectedRam: '', selectedStorage: '', selectedHdd: '',
                       })} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
                         {t('product.add_to_cart')}
                       </button>
@@ -185,7 +185,7 @@ export default function HomePage() {
                         addItem({
                           productId: product.id, productName: product.name, productSlug: product.slug,
                           productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                          selectedRam: '', selectedStorage: '',
+                          selectedRam: '', selectedStorage: '', selectedHdd: '',
                         });
                         navigate('/product/' + product.slug);
                       }} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
@@ -256,7 +256,7 @@ export default function HomePage() {
                       <button onClick={() => addItem({
                         productId: product.id, productName: product.name, productSlug: product.slug,
                         productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                        selectedRam: '', selectedStorage: '',
+                        selectedRam: '', selectedStorage: '', selectedHdd: '',
                       })} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
                         {t('product.add_to_cart')}
                       </button>
@@ -264,7 +264,7 @@ export default function HomePage() {
                         addItem({
                           productId: product.id, productName: product.name, productSlug: product.slug,
                           productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                          selectedRam: '', selectedStorage: '',
+                          selectedRam: '', selectedStorage: '', selectedHdd: '',
                         });
                         navigate('/product/' + product.slug);
                       }} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">

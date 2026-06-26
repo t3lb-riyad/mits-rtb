@@ -309,8 +309,8 @@ function OrderDetailView({ orderId, onBack }: { orderId: number; onBack: () => v
                         </td>
                         <td className="px-3 py-2 font-medium">{item.product_name}</td>
                         <td className="px-3 py-2 text-xs text-gray-500">
-                          {item.selected_ram || item.selected_storage
-                            ? [item.selected_ram && `RAM: ${item.selected_ram}`, item.selected_storage && `Storage: ${item.selected_storage}`].filter(Boolean).join(', ')
+                          {item.selected_ram || item.selected_storage || item.selected_hdd
+                            ? [item.selected_ram && `RAM: ${item.selected_ram}`, item.selected_storage && `Storage: ${item.selected_storage}`, item.selected_hdd && `HDD: ${item.selected_hdd}`].filter(Boolean).join(', ')
                             : item.attributes
                               ? (() => { try { const a = JSON.parse(item.attributes); return Object.entries(a).map(([k, v]) => `${k}: ${v}`).join(', '); } catch { return item.attributes; } })()
                               : '-'}
@@ -562,9 +562,10 @@ const uploadFile = async (file: File): Promise<string> => {
 
 const RAM_OPTIONS = ['2GB', '4GB', '8GB', '16GB', '18GB', '24GB', '32GB', '36GB', '64GB', '128GB'];
 const STORAGE_OPTIONS = ['128GB SSD', '256GB SSD', '512GB SSD', '1TB SSD', '2TB SSD', '4TB SSD'];
+const HDD_OPTIONS = ['500GB HDD', '1TB HDD', '2TB HDD'];
 
 function AttrValueField({ name, value, onChange }: { name: string; value: string; onChange: (v: string) => void }) {
-  const options = name === 'RAM' ? RAM_OPTIONS : name === 'Storage' ? STORAGE_OPTIONS : null;
+  const options = name === 'RAM' ? RAM_OPTIONS : name === 'Storage' ? STORAGE_OPTIONS : name === 'HDD' ? HDD_OPTIONS : null;
   if (options) {
     return (
       <select value={value} onChange={e => onChange(e.target.value)} className="input-field text-xs">

@@ -8,7 +8,7 @@ router.post('/', orderLimiter, (req, res) => {
   try {
     const { customer_name, customer_phone, customer_email, customer_address, customer_city, customer_province,
       items, product_id, product_name, quantity, unit_price, shipping_method, shipping_office_id, shipping_office_name, notes, attributes,
-      selected_ram, selected_storage, discount_percent, discount_amount, total_amount: bodyTotalAmount } = req.body;
+      selected_ram, selected_storage, selected_hdd, discount_percent, discount_amount, total_amount: bodyTotalAmount } = req.body;
 
     if (!customer_name || !customer_phone || !shipping_method) {
       return res.status(400).json({ error: 'Missing required fields: name, phone, shipping method.' });
@@ -28,7 +28,7 @@ router.post('/', orderLimiter, (req, res) => {
     if (items && Array.isArray(items) && items.length > 0) {
       orderItems = items;
     } else if (product_id && product_name && quantity && unit_price) {
-      orderItems = [{ product_id, product_name, quantity, unit_price, attributes: attributes || null, product_image: null, selected_ram: selected_ram || null, selected_storage: selected_storage || null }];
+      orderItems = [{ product_id, product_name, quantity, unit_price, attributes: attributes || null, product_image: null, selected_ram: selected_ram || null, selected_storage: selected_storage || null, selected_hdd: selected_hdd || null }];
     } else {
       return res.status(400).json({ error: 'Missing required fields: product items.' });
     }
@@ -74,8 +74,8 @@ router.post('/', orderLimiter, (req, res) => {
     orderItems.forEach(item => {
       const imgUrl = item.product_image || null;
       const attrs = item.attributes ? (typeof item.attributes === 'string' ? item.attributes : JSON.stringify(item.attributes)) : null;
-      prepare('INSERT INTO order_items (order_id, product_id, product_name, product_image, quantity, unit_price, attributes, selected_ram, selected_storage) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
-        .run(newOrder.id, item.product_id || null, item.product_name, imgUrl, item.quantity || 1, item.unit_price || 0, attrs, item.selected_ram || null, item.selected_storage || null);
+      prepare('INSERT INTO order_items (order_id, product_id, product_name, product_image, quantity, unit_price, attributes, selected_ram, selected_storage, selected_hdd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+        .run(newOrder.id, item.product_id || null, item.product_name, imgUrl, item.quantity || 1, item.unit_price || 0, attrs, item.selected_ram || null, item.selected_storage || null, item.selected_hdd || null);
       if (item.product_id) {
         prepare('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?').run(item.quantity || 1, item.product_id);
       }

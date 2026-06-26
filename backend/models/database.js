@@ -264,6 +264,7 @@ async function initDatabase() {
       attributes TEXT,
       selected_ram TEXT,
       selected_storage TEXT,
+      selected_hdd TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
@@ -272,8 +273,16 @@ async function initDatabase() {
   try { db.run("ALTER TABLE orders ADD COLUMN item_count INTEGER DEFAULT 1"); } catch(e) {}
   try { db.run("ALTER TABLE order_items ADD COLUMN selected_ram TEXT"); } catch(e) {}
   try { db.run("ALTER TABLE order_items ADD COLUMN selected_storage TEXT"); } catch(e) {}
+  try { db.run("ALTER TABLE order_items ADD COLUMN selected_hdd TEXT"); } catch(e) {}
   try { db.run("ALTER TABLE orders ADD COLUMN discount_percent REAL DEFAULT 0"); } catch(e) {}
   try { db.run("ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0"); } catch(e) {}
+  try {
+    const hddProducts = db.exec("SELECT DISTINCT pa.product_id FROM product_attributes pa WHERE pa.attribute_name = 'Storage' AND pa.attribute_value LIKE '%SSD' AND NOT EXISTS (SELECT 1 FROM product_attributes WHERE product_id = pa.product_id AND attribute_name = 'Storage' AND attribute_value = '500GB HDD')");
+    if (hddProducts && hddProducts[0] && hddProducts[0].values) {
+      const stmt = db.prepare('INSERT INTO product_attributes (product_id, attribute_name, attribute_value, price_modifier) VALUES (?, ?, ?, ?)');
+      hddProducts[0].values.forEach(row => { const pid = row[0]; stmt.run([pid, 'Storage', '500GB HDD', -5000]); stmt.run([pid, 'Storage', '1TB HDD', -3000]); });
+    }
+  } catch(e) {}
   db.run('CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)');
   db.run(`
     CREATE TABLE IF NOT EXISTS brands (

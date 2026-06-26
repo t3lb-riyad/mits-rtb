@@ -54,6 +54,7 @@ export default function CartPage() {
         unit_price: i.unitPrice,
         selected_ram: i.selectedRam,
         selected_storage: i.selectedStorage,
+        selected_hdd: i.selectedHdd,
       }));
       const payload = {
         ...form,
@@ -123,9 +124,9 @@ export default function CartPage() {
               <Link to={`/product/${item.productSlug}`} className="font-medium text-dark hover:text-primary truncate block">
                 {item.productName}
               </Link>
-              {item.selectedRam || item.selectedStorage ? (
+              {item.selectedRam || item.selectedStorage || item.selectedHdd ? (
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {item.selectedRam && `RAM: ${item.selectedRam}`}{item.selectedRam && item.selectedStorage ? ', ' : ''}{item.selectedStorage && `Storage: ${item.selectedStorage}`}
+                  {item.selectedRam && `RAM: ${item.selectedRam}`}{item.selectedRam && (item.selectedStorage || item.selectedHdd) ? ', ' : ''}{item.selectedStorage && `Storage: ${item.selectedStorage}`}{item.selectedStorage && item.selectedHdd ? ', ' : ''}{item.selectedHdd && `HDD: ${item.selectedHdd}`}
                 </p>
               ) : null}
               <p className="text-sm text-primary font-semibold mt-1">{Math.round(item.unitPrice).toLocaleString()} DA / unit</p>

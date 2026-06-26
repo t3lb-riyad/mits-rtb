@@ -124,6 +124,7 @@ export default function ProductPage() {
       unitPrice,
       selectedRam: selectedAttrs['RAM'] || '',
       selectedStorage: selectedAttrs['Storage'] || '',
+      selectedHdd: selectedAttrs['HDD'] || '',
     });
     setCartAdded(true);
     setTimeout(() => setCartAdded(false), 2500);

@@ -10,6 +10,7 @@ export interface CartItem {
   unitPrice: number;
   selectedRam: string;
   selectedStorage: string;
+  selectedHdd: string;
 }
 
 interface CartContextType {
@@ -37,7 +38,7 @@ function loadCart(): CartItem[] {
 }
 
 function generateCartId(item: Omit<CartItem, 'cartId'>): string {
-  return `${item.productId}_${item.selectedRam}_${item.selectedStorage}`;
+  return `${item.productId}_${item.selectedRam}_${item.selectedStorage}_${item.selectedHdd}`;
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {

@@ -58,9 +58,9 @@ export default function CartDrawer() {
                 <Link to={`/product/${item.productSlug}`} onClick={() => setOpen(false)} className="text-sm font-medium text-dark hover:text-primary truncate block">
                   {item.productName}
                 </Link>
-                {item.selectedRam || item.selectedStorage ? (
+                {item.selectedRam || item.selectedStorage || item.selectedHdd ? (
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {item.selectedRam && `RAM: ${item.selectedRam}`}{item.selectedRam && item.selectedStorage ? ', ' : ''}{item.selectedStorage && `Storage: ${item.selectedStorage}`}
+                    {item.selectedRam && `RAM: ${item.selectedRam}`}{item.selectedRam && (item.selectedStorage || item.selectedHdd) ? ', ' : ''}{item.selectedStorage && `Storage: ${item.selectedStorage}`}{item.selectedStorage && item.selectedHdd ? ', ' : ''}{item.selectedHdd && `HDD: ${item.selectedHdd}`}
                   </p>
                 ) : null}
                 <p className="text-sm font-semibold text-primary mt-1">{formatPrice(item.unitPrice)}</p>
