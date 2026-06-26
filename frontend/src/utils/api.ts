@@ -1,4 +1,4 @@
-const API_BASE = '/api';
+const API_BASE = 'https://mits-rtb-backend.onrender.com/api';
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
