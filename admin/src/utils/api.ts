@@ -1,5 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'https://mits-rtb-backend.onrender.com';
-const API = `${API_BASE}/api/admin`;
+const API = 'https://mits-rtb-backend.onrender.com/api/admin';
 
 function getToken(): string | null {
   return localStorage.getItem('admin_token');
