@@ -16,7 +16,7 @@ const ALGERIAN_WILAYAS = [
 
 export default function CartPage() {
   const { t } = useTranslation();
-  const { items, removeItem, updateQuantity, clearCart, totalPrice, totalItems } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, totalPrice, totalItems, discountPercent, discountAmount, finalTotal } = useCart();
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<any>(null);
@@ -59,6 +59,9 @@ export default function CartPage() {
         ...form,
         customer_phone: form.customer_phone.replace(/[\s\-\(\)]/g, ''),
         items: cartItems,
+        discount_percent: discountPercent,
+        discount_amount: Math.round(discountAmount),
+        total_amount: Math.round(finalTotal),
       };
       const res = await api.post<{ success: boolean; order_number: string }>('/orders', payload);
       setOrderResult(res);
@@ -141,10 +144,43 @@ export default function CartPage() {
       </div>
 
       <div className="card p-6 mb-8">
-        <div className="flex justify-between items-center text-lg">
-          <span className="font-bold text-dark">Total</span>
-          <span className="font-bold text-primary text-xl">{Math.round(totalPrice).toLocaleString()} DA</span>
+        <div className="border-b border-gray-100 pb-4 mb-2">
+          <div className="flex justify-between items-center text-base">
+            <span className="text-gray-600">Subtotal ({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+            <span className="text-gray-800 font-semibold">{Math.round(totalPrice).toLocaleString()} DA</span>
+          </div>
         </div>
+
+        {discountPercent > 0 && (
+          <div className="bg-green-50 border border-green-100 rounded-sm p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-green-800 font-semibold text-sm">Bulk Discount ({discountPercent}% off)</span>
+              <span className="text-green-700 font-bold">-{Math.round(discountAmount).toLocaleString()} DA</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-green-200">
+              <span className="text-green-900 font-bold text-lg">Total to Pay</span>
+              <span className="text-green-900 font-bold text-xl">{Math.round(finalTotal).toLocaleString()} DA</span>
+            </div>
+          </div>
+        )}
+
+        {discountPercent === 0 && (
+          <div className="flex justify-between items-center">
+            <span className="font-bold text-lg text-dark">Total</span>
+            <span className="font-bold text-primary text-2xl">{Math.round(totalPrice).toLocaleString()} DA</span>
+          </div>
+        )}
+
+        {totalItems > 0 && discountPercent === 0 && totalItems <= 5 && (
+          <p className="text-xs text-gray-400 mt-4 text-right border-t border-gray-50 pt-3">
+            Add {6 - totalItems} more item{6 - totalItems !== 1 ? 's' : ''} to get a 5% bulk discount
+          </p>
+        )}
+        {discountPercent === 5 && (
+          <p className="text-xs text-green-600 mt-2 text-right">
+            Add {11 - totalItems} more item{11 - totalItems !== 1 ? 's' : ''} to get an 8% bulk discount
+          </p>
+        )}
       </div>
 
       {!showForm ? (

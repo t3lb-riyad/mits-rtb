@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
 export default function CartDrawer() {
-  const { items, removeItem, updateQuantity, totalItems, totalPrice } = useCart();
+  const { items, removeItem, updateQuantity, totalItems, totalPrice, discountPercent, discountAmount, finalTotal } = useCart();
   const [open, setOpen] = useState(false);
 
   if (totalItems === 0) return null;
@@ -77,9 +77,19 @@ export default function CartDrawer() {
 
         {/* Footer */}
         <div className="border-t border-gray-100 px-5 py-4 space-y-3">
-          <div className="flex justify-between items-center text-base">
-            <span className="font-semibold text-dark">Total</span>
-            <span className="font-bold text-primary text-lg">{formatPrice(totalPrice)}</span>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-gray-500">Subtotal</span>
+            <span className="text-gray-700">{formatPrice(totalPrice)}</span>
+          </div>
+          {discountPercent > 0 && (
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-green-600 font-medium">Bulk Discount (-{discountPercent}%)</span>
+              <span className="text-green-600">-{formatPrice(discountAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center text-base pt-2 border-t border-gray-100">
+            <span className="font-bold text-dark">Total to Pay</span>
+            <span className="font-bold text-primary text-lg">{formatPrice(discountPercent > 0 ? finalTotal : totalPrice)}</span>
           </div>
           <Link to="/cart" onClick={() => setOpen(false)}
             className="block w-full text-center py-3 bg-primary text-white font-bold uppercase tracking-wider text-sm hover:bg-blue-800 transition-colors rounded-sm">

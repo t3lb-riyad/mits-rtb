@@ -8,7 +8,7 @@ router.post('/', orderLimiter, (req, res) => {
   try {
     const { customer_name, customer_phone, customer_email, customer_address, customer_city, customer_province,
       items, product_id, product_name, quantity, unit_price, shipping_method, shipping_office_id, shipping_office_name, notes, attributes,
-      selected_ram, selected_storage } = req.body;
+      selected_ram, selected_storage, discount_percent, discount_amount, total_amount: bodyTotalAmount } = req.body;
 
     if (!customer_name || !customer_phone || !shipping_method) {
       return res.status(400).json({ error: 'Missing required fields: name, phone, shipping method.' });
@@ -33,8 +33,11 @@ router.post('/', orderLimiter, (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: product items.' });
     }
 
-    const totalAmount = orderItems.reduce((sum, item) => sum + (item.unit_price || 0) * (item.quantity || 1), 0);
+    const rawTotal = orderItems.reduce((sum, item) => sum + (item.unit_price || 0) * (item.quantity || 1), 0);
+    const totalAmount = bodyTotalAmount !== undefined ? bodyTotalAmount : rawTotal;
     const itemCount = orderItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const discPct = discount_percent || 0;
+    const discAmt = discount_amount || 0;
 
     let customer = prepare('SELECT * FROM customers WHERE phone = ?').get(phone);
     if (customer) {
@@ -57,14 +60,14 @@ router.post('/', orderLimiter, (req, res) => {
       INSERT INTO orders (order_number, customer_id, customer_phone, customer_name, customer_email,
         customer_address, customer_city, customer_province, product_id, product_name,
         quantity, unit_price, total_amount, item_count, shipping_method, shipping_office_id,
-        shipping_office_name, notes, order_status, is_fraud_flagged)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)
+        shipping_office_name, notes, order_status, is_fraud_flagged, discount_percent, discount_amount)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?, ?)
     `).run(orderNum, customer.id, phone, customer_name, customer_email || null,
       customer_address || null, customer_city || null, customer_province || null,
       firstItem.product_id || null, firstItem.product_name || null,
       firstItem.quantity || 1, firstItem.unit_price || 0, totalAmount, itemCount,
       shipping_method, shipping_office_id || null, shipping_office_name || null,
-      notes || null, isFraudFlagged || isSpam);
+      notes || null, isFraudFlagged || isSpam, discPct, discAmt);
 
     const newOrder = prepare('SELECT id FROM orders WHERE order_number = ?').get(orderNum);
 

@@ -145,6 +145,8 @@ async function initDatabase() {
       delivered_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      discount_percent REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
       FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL,
       FOREIGN KEY (shipping_office_id) REFERENCES shipping_offices(id) ON DELETE SET NULL
@@ -270,6 +272,8 @@ async function initDatabase() {
   try { db.run("ALTER TABLE orders ADD COLUMN item_count INTEGER DEFAULT 1"); } catch(e) {}
   try { db.run("ALTER TABLE order_items ADD COLUMN selected_ram TEXT"); } catch(e) {}
   try { db.run("ALTER TABLE order_items ADD COLUMN selected_storage TEXT"); } catch(e) {}
+  try { db.run("ALTER TABLE orders ADD COLUMN discount_percent REAL DEFAULT 0"); } catch(e) {}
+  try { db.run("ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0"); } catch(e) {}
   db.run('CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)');
   db.run(`
     CREATE TABLE IF NOT EXISTS brands (

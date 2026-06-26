@@ -97,6 +97,9 @@ export default function ProductPage() {
     .reduce((sum, a) => sum + (a.price_modifier || 0), 0);
   const unitPrice = product ? product.base_price + attrPriceMod : 0;
   const totalPrice = unitPrice * quantity;
+  const discountPct = quantity > 10 ? 8 : quantity > 5 ? 5 : 0;
+  const discountAmt = (totalPrice * discountPct) / 100;
+  const finalTotal = totalPrice - discountAmt;
 
   const formatPrice = (price: number) => Math.round(price).toLocaleString() + ' DA';
 
@@ -158,6 +161,9 @@ export default function ProductPage() {
         shipping_method: form.shipping_method,
         attributes: selectedAttrs,
         notes: form.notes || null,
+        total_amount: Math.round(finalTotal),
+        discount_percent: discountPct,
+        discount_amount: Math.round(discountAmt),
       });
       setOrderNumber(res.order_number);
       setSubmitted(true);
@@ -422,10 +428,38 @@ export default function ProductPage() {
                 <span>{t('product.quantity')}</span>
                 <span>{quantity}</span>
               </div>
-              <div className="border-t border-gray-200 pt-2 flex justify-between font-bold text-lg">
-                <span>{t('product.total')}</span>
-                <span className="text-primary">{formatPrice(totalPrice)}</span>
+              <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                <span>Original Price</span>
+                <span>{formatPrice(totalPrice)}</span>
               </div>
+              {discountPct > 0 && (
+                <>
+                  <div className="flex justify-between text-sm text-green-700 font-medium mt-1">
+                    <span>Bulk Discount (-{discountPct}%)</span>
+                    <span>-{formatPrice(discountAmt)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-green-200 text-green-900">
+                    <span>Final Price</span>
+                    <span>{formatPrice(finalTotal)}</span>
+                  </div>
+                </>
+              )}
+              {discountPct === 0 && (
+                <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-gray-200">
+                  <span>{t('product.total')}</span>
+                  <span className="text-primary">{formatPrice(totalPrice)}</span>
+                </div>
+              )}
+              {quantity > 0 && discountPct === 0 && quantity <= 5 && (
+                <p className="text-xs text-gray-400 mt-2 text-right border-t border-gray-50 pt-2">
+                  Add {6 - quantity} more item{6 - quantity !== 1 ? 's' : ''} to get a 5% bulk discount
+                </p>
+              )}
+              {discountPct === 5 && (
+                <p className="text-xs text-green-600 mt-2 text-right">
+                  Add {11 - quantity} more item{11 - quantity !== 1 ? 's' : ''} to get an 8% bulk discount
+                </p>
+              )}
             </div>
 
             {cartAdded && (
