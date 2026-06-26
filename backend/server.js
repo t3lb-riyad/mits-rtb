@@ -21,7 +21,7 @@ async function start() {
   const PORT = process.env.PORT || 3001;
 
   app.use(cors({
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'],
+    origin: true, // أو يمكنك كتابة '*' إذا لم تكن تستخدم credentials
     credentials: true
   }));
   app.use(express.json({ limit: '50mb' }));
