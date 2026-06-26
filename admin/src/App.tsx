@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminApi } from './utils/api';
+import { adminApi, API_BASE } from './utils/api';
 
 type Page = 'dashboard' | 'orders' | 'order-detail' | 'customers' | 'customer-detail'
   | 'products' | 'categories' | 'brands' | 'analytics' | 'inventory' | 'delayed' | 'exchanges'
@@ -547,7 +547,6 @@ function CustomerDetailView({ customerId, onBack }: { customerId: number; onBack
 }
 
 /* =================== PRODUCTS =================== */
-const API_BASE = '/api';
 const uploadFile = async (file: File): Promise<string> => {
   const token = localStorage.getItem('admin_token');
   const fd = new FormData();
@@ -666,7 +665,21 @@ function ProductsPage() {
           brandId = created ? created.id : null;
         }
       }
-      await adminApi.post('/products', { ...form, brand_id: brandId, image_urls: form.image_urls.length > 0 ? JSON.stringify(form.image_urls) : null, product_attributes: productAttrs.filter(a => a.attribute_name && a.attribute_value), slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') });
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch(API_BASE + '/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
+        body: JSON.stringify({ ...form, brand_id: brandId, image_urls: form.image_urls.length > 0 ? JSON.stringify(form.image_urls) : null, product_attributes: productAttrs.filter(a => a.attribute_name && a.attribute_value), slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') }),
+      });
+      const ct = res.headers.get('content-type');
+      if (!res.ok || !ct || !ct.includes('application/json')) {
+        const raw = await res.text();
+        console.error('Create product raw error:', raw);
+        alert('Server Error (' + res.status + '): check console for details');
+        return;
+      }
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
       setShowForm(false);
       setProductAttrs([]);
       setBrandNewName('');
@@ -695,21 +708,35 @@ function ProductsPage() {
           brandId = created ? created.id : null;
         }
       }
-      await adminApi.put('/products/' + editingProduct.id, {
-        name: editingProduct.name,
-        slug: editingProduct.slug,
-        base_price: editingProduct.base_price,
-        cost_price: editingProduct.cost_price,
-        stock_quantity: editingProduct.stock_quantity,
-        category_id: editingProduct.category_id || null,
-        brand_id: brandId,
-        description: editingProduct.description,
-        short_description: editingProduct.short_description,
-        best_of: editingProduct.best_of || null,
-        image_url: editingProduct.image_url || null,
-        image_urls: editingProduct.image_urls ? JSON.stringify(editingProduct.image_urls) : null,
-        product_attributes: editAttrs.filter(a => a.attribute_name && a.attribute_value)
+      const token = localStorage.getItem('admin_token');
+      const res = await fetch(API_BASE + '/products/' + editingProduct.id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': 'Bearer ' + token } : {}) },
+        body: JSON.stringify({
+          name: editingProduct.name,
+          slug: editingProduct.slug,
+          base_price: editingProduct.base_price,
+          cost_price: editingProduct.cost_price,
+          stock_quantity: editingProduct.stock_quantity,
+          category_id: editingProduct.category_id || null,
+          brand_id: brandId,
+          description: editingProduct.description,
+          short_description: editingProduct.short_description,
+          best_of: editingProduct.best_of || null,
+          image_url: editingProduct.image_url || null,
+          image_urls: editingProduct.image_urls ? JSON.stringify(editingProduct.image_urls) : null,
+          product_attributes: editAttrs.filter(a => a.attribute_name && a.attribute_value)
+        }),
       });
+      const ct = res.headers.get('content-type');
+      if (!res.ok || !ct || !ct.includes('application/json')) {
+        const raw = await res.text();
+        console.error('Edit product raw error:', raw);
+        alert('Server Error (' + res.status + '): check console for details');
+        return;
+      }
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
       setEditingProduct(null);
       setEditAttrs([]);
       setEditBrandNewName('');

@@ -1,4 +1,4 @@
-export const API_BASE = process.env.VITE_API_BASE || 'https://mits-rtb-backend.onrender.com/api';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://mits-rtb-backend.onrender.com/api';
 
 export function resolveImageUrl(url: string): string {
   if (!url) return '';

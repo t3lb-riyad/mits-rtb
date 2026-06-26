@@ -37,6 +37,9 @@ router.post('/setup', (req, res) => {
 router.use(authenticateToken);
 
 router.post('/upload', upload.single('file'), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   try {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded.' });
     const url = await uploadImage(req.file.buffer, req.file.originalname, req.file.mimetype);

@@ -1,7 +1,18 @@
-const API = 'https://mits-rtb-backend.onrender.com/api/admin';
+export const API_BASE = import.meta.env.VITE_API_BASE || 'https://mits-rtb-backend.onrender.com/api/admin';
+const API = API_BASE;
 
 function getToken(): string | null {
   return localStorage.getItem('admin_token');
+}
+
+async function safeParseJson(res: Response): Promise<any> {
+  const contentType = res.headers.get('content-type');
+  if (!contentType || !contentType.includes('application/json')) {
+    const rawText = await res.text();
+    console.error('Non-JSON response:', rawText);
+    throw new Error(`Server returned non-JSON (${res.status}): check console for details`);
+  }
+  return res.json();
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -16,10 +27,10 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     throw new Error('Session expired');
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
+    const err = await safeParseJson(res).catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || `Request failed (${res.status})`);
   }
-  return res.json();
+  return safeParseJson(res);
 }
 
 export const adminApi = {
