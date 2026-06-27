@@ -1,5 +1,34 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
+export const DISCOUNT_TIERS = [
+  { minQty: 11, percent: 8, label: '8%' },
+  { minQty: 6, percent: 5, label: '5%' },
+] as const;
+
+export function getDiscountPercent(totalQty: number): number {
+  for (const tier of DISCOUNT_TIERS) {
+    if (totalQty >= tier.minQty) return tier.percent;
+  }
+  return 0;
+}
+
+export function getDiscountLabel(totalQty: number): string | null {
+  for (const tier of DISCOUNT_TIERS) {
+    if (totalQty >= tier.minQty) return `${tier.percent}% OFF`;
+  }
+  return null;
+}
+
+export function getNextTierHint(totalQty: number): string | null {
+  for (const tier of DISCOUNT_TIERS) {
+    if (totalQty < tier.minQty) {
+      const needed = tier.minQty - totalQty;
+      return `Order more than ${tier.minQty - 1} items for ${tier.percent}% off`;
+    }
+  }
+  return null;
+}
+
 export interface CartItem {
   cartId: string;
   productId: number;
@@ -91,9 +120,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { totalItems, totalPrice, discountPercent, discountAmount, finalTotal } = useMemo(() => {
     const ti = items.reduce((sum, i) => sum + i.quantity, 0);
     const tp = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-    let dp = 0;
-    if (ti > 10) dp = 8;
-    else if (ti > 5) dp = 5;
+    const dp = getDiscountPercent(ti);
     const da = (tp * dp) / 100;
     const ft = tp - da;
     return { totalItems: ti, totalPrice: tp, discountPercent: dp, discountAmount: da, finalTotal: ft };

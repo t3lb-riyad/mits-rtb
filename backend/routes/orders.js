@@ -40,8 +40,8 @@ router.post('/', orderLimiter, async (req, res) => {
     const rawTotal = orderItems.reduce((sum, item) => sum + (item.unit_price || 0) * (item.quantity || 1), 0);
     const totalAmount = bodyTotalAmount !== undefined ? bodyTotalAmount : rawTotal;
     const itemCount = orderItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const discPct = discount_percent || 0;
-    const discAmt = discount_amount || 0;
+    const discPct = itemCount > 10 ? 8 : itemCount > 5 ? 5 : 0;
+    const discAmt = discPct > 0 ? Math.round(rawTotal * discPct / 100) : 0;
 
     let customer = await prepare('SELECT * FROM customers WHERE phone = $1').get(phone);
     if (customer) {

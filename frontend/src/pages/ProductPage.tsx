@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart, createCartItem } from '../context/CartContext';
+import { useCart, createCartItem, DISCOUNT_TIERS, getDiscountPercent, getDiscountLabel, getNextTierHint } from '../context/CartContext';
 import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
@@ -97,7 +97,7 @@ export default function ProductPage() {
     .reduce((sum, a) => sum + (a.price_modifier || 0), 0);
   const unitPrice = product ? product.base_price + attrPriceMod : 0;
   const totalPrice = unitPrice * quantity;
-  const discountPct = quantity > 10 ? 8 : quantity > 5 ? 5 : 0;
+  const discountPct = getDiscountPercent(quantity);
   const discountAmt = (totalPrice * discountPct) / 100;
   const finalTotal = totalPrice - discountAmt;
 
@@ -291,8 +291,22 @@ export default function ProductPage() {
                 <button type="button" onClick={() => setQuantity(q => Math.max(1, q - 1))}
                   className="w-10 h-10 border border-gray-300 flex items-center justify-center text-lg hover:border-primary transition-colors">-</button>
                 <span className="text-xl font-bold text-dark w-10 text-center">{quantity}</span>
-                <button type="button" onClick={() => setQuantity(q => q + 1)}
+                <button type="button" onClick={() => setQuantity(q => Math.min(product.stock_quantity, q + 1))}
                   className="w-10 h-10 border border-gray-300 flex items-center justify-center text-lg hover:border-primary transition-colors">+</button>
+              </div>
+              {quantity >= product.stock_quantity && (
+                <p className="text-xs text-orange-600 mt-1">Max stock reached ({product.stock_quantity})</p>
+              )}
+              <div className="mt-2">
+                {discountPct > 0 ? (
+                  <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-sm">
+                    Bulk Discount Applied: {discountPct}% OFF!
+                  </span>
+                ) : (
+                  <span className="inline-block text-gray-400 text-xs">
+                    {getNextTierHint(quantity) || `Order more than ${DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1].minQty - 1} items for ${DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1].percent}% off`}
+                  </span>
+                )}
               </div>
             </div>
 
