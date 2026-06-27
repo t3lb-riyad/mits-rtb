@@ -73,8 +73,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 router.get('/dashboard', (req, res) => {
   try {
     const totalOrders = prepare('SELECT COUNT(*) as count FROM orders').get();
-    const pendingOrders = prepare("SELECT COUNT(*) as count FROM orders WHERE order_status = 'confirmed'").get();
-    const totalRevenue = prepare('SELECT COALESCE(SUM(total_amount), 0) as total FROM orders').get();
+    const pendingOrders = prepare("SELECT COUNT(*) as count FROM orders WHERE order_status = 'pending'").get();
+    const totalRevenue = prepare("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE order_status = 'delivered'").get();
     const totalCustomers = prepare('SELECT COUNT(*) as count FROM customers').get();
     const pendingExchanges = prepare("SELECT COUNT(*) as count FROM exchange_requests WHERE status = 'pending'").get();
     const lowStock = prepare("SELECT COUNT(*) as count FROM products WHERE stock_quantity <= low_stock_threshold AND is_active = 1").get();
@@ -124,16 +124,24 @@ function updateOrderStatus(req, res) {
     const { order_status, shipping_status, tracking_number, courier_name, notes } = req.body;
     const order = prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
     if (!order) return res.status(404).json({ error: 'Order not found.' });
+    const prevStatus = order.order_status;
 
     if (order_status) {
       prepare('UPDATE orders SET order_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(order_status, req.params.id);
       prepare('INSERT INTO order_status_history (order_id, status, notes) VALUES (?, ?, ?)').run(req.params.id, order_status, notes || `Status updated to ${order_status}`);
       if (order_status === 'delivered') {
         prepare("UPDATE orders SET delivered_at = datetime('now') WHERE id = ?").run(req.params.id);
-        if (order.customer_id) prepare('UPDATE customers SET successful_deliveries = successful_deliveries + 1 WHERE id = ?').run(order.customer_id);
+        if (order.customer_id) {
+          prepare('UPDATE customers SET successful_deliveries = successful_deliveries + 1, total_spent = total_spent + ? WHERE id = ?').run(order.total_amount, order.customer_id);
+        }
       }
       if (order_status === 'returned') {
-        if (order.customer_id) prepare('UPDATE customers SET returned_packages = returned_packages + 1 WHERE id = ?').run(order.customer_id);
+        if (order.customer_id) {
+          prepare('UPDATE customers SET returned_packages = returned_packages + 1 WHERE id = ?').run(order.customer_id);
+          if (prevStatus === 'delivered') {
+            prepare('UPDATE customers SET total_spent = MAX(0, total_spent - ?) WHERE id = ?').run(order.total_amount, order.customer_id);
+          }
+        }
         if (order.product_id) prepare('UPDATE products SET stock_quantity = stock_quantity + ? WHERE id = ?').run(order.quantity, order.product_id);
       }
     }
@@ -333,7 +341,7 @@ router.get('/analytics/profit', (req, res) => {
     const products = prepare('SELECT * FROM products WHERE is_active = 1').all();
     const productProfits = products.map(p => ({ ...p, profit: calculateProfit(p) }));
     const totalExpenses = prepare('SELECT COALESCE(SUM(amount), 0) as total FROM expenses').get();
-    const totalRevenue = prepare('SELECT COALESCE(SUM(total_amount), 0) as total FROM orders').get();
+    const totalRevenue = prepare("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE order_status = 'delivered'").get();
     const totalCosts = products.reduce((s, p) => s + (p.cost_price || 0), 0);
     const totalOrders = prepare('SELECT COUNT(*) as count FROM orders').get().count;
     const netProfit = totalRevenue.total - totalCosts - totalExpenses.total;

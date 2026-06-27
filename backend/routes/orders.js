@@ -61,7 +61,7 @@ router.post('/', orderLimiter, (req, res) => {
         customer_address, customer_city, customer_province, product_id, product_name,
         quantity, unit_price, total_amount, item_count, shipping_method, shipping_office_id,
         shipping_office_name, notes, order_status, is_fraud_flagged, discount_percent, discount_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
     `).run(orderNum, customer.id, phone, customer_name, customer_email || null,
       customer_address || null, customer_city || null, customer_province || null,
       firstItem.product_id || null, firstItem.product_name || null,
@@ -81,8 +81,8 @@ router.post('/', orderLimiter, (req, res) => {
       }
     });
 
-    prepare('INSERT INTO order_status_history (order_id, status, notes) VALUES (?, ?, ?)').run(newOrder.id, 'confirmed', 'Order placed successfully');
-    prepare('UPDATE customers SET total_orders = total_orders + 1, total_spent = total_spent + ? WHERE id = ?').run(totalAmount, customer.id);
+    prepare('INSERT INTO order_status_history (order_id, status, notes) VALUES (?, ?, ?)').run(newOrder.id, 'pending', 'Order placed');
+    prepare('UPDATE customers SET total_orders = total_orders + 1 WHERE id = ?').run(customer.id);
 
     res.status(201).json({ success: true, order_number: orderNum, message: 'Order placed successfully.', is_fraud_flagged: !!isFraudFlagged });
   } catch (err) {
