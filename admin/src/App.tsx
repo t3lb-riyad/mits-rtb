@@ -199,6 +199,7 @@ function OrdersPage({ onViewOrder }: { onViewOrder: () => void }) {
               <th className="px-4 py-3 font-medium text-gray-600">Order #</th>
               <th className="px-4 py-3 font-medium text-gray-600">Customer</th>
               <th className="px-4 py-3 font-medium text-gray-600">Product</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Notes</th>
               <th className="px-4 py-3 font-medium text-gray-600">Total</th>
               <th className="px-4 py-3 font-medium text-gray-600">Status</th>
               <th className="px-4 py-3 font-medium text-gray-600">Risk</th>
@@ -212,6 +213,7 @@ function OrdersPage({ onViewOrder }: { onViewOrder: () => void }) {
                 <td className="px-4 py-3 font-medium">{o.order_number}</td>
                 <td className="px-4 py-3">{o.customer_name}<br /><span className="text-xs text-gray-500">{o.customer_phone}</span></td>
                 <td className="px-4 py-3">{o.product_name} x{o.quantity}</td>
+                <td className="px-4 py-3 text-xs text-gray-500 max-w-[120px] truncate" title={o.notes || ''}>{o.notes || '-'}</td>
                 <td className="px-4 py-3">{Math.round(o.total_amount).toLocaleString()} DA</td>
                 <td className="px-4 py-3">{statusBadge(o.order_status)}</td>
                 <td className="px-4 py-3">
