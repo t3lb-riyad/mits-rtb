@@ -14,7 +14,7 @@ export default function HomePage() {
   const [bestOfProducts, setBestOfProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [bestOfFilter, setBestOfFilter] = useState<string | null>(null);
+  const [bestOfFilter, setBestOfFilter] = useState<string>('study');
   const [loading, setLoading] = useState(true);
 
   const [filterBrand, setFilterBrand] = useState('');
@@ -67,13 +67,8 @@ export default function HomePage() {
 
   useEffect(() => { setCurrentPage(1); }, [selectedCategory, filterBrand, filterRam, filterStorage]);
 
-  const bestOfFiltered = bestOfFilter
-    ? allProducts.filter(p => p.best_of === (
-        bestOfFilter === 'study' ? 'الدراسة' :
-        bestOfFilter === 'work' ? 'العمل' :
-        bestOfFilter === 'gaming' ? 'الألعاب' : null
-      ))
-    : allProducts.filter(p => p.best_of);
+  const BEST_OF_MAP: Record<string, string> = { study: 'الدراسة', work: 'العمل', gaming: 'الألعاب' };
+  const bestOfFiltered = allProducts.filter(p => p.best_of === BEST_OF_MAP[bestOfFilter]);
 
   const filteredProducts = selectedCategory
     ? allProducts.filter((p) => p.category_name?.toLowerCase() === categories.find(c => c.slug === selectedCategory)?.name?.toLowerCase())
@@ -147,11 +142,6 @@ export default function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="section-title mb-6" style={{ color: '#3D1534' }}>{t('home.best_of')}</h2>
             <div className="flex flex-wrap gap-3 mb-8">
-              <button onClick={() => setBestOfFilter(null)}
-                className={`px-5 py-2 text-sm font-medium rounded-sm transition-all ${!bestOfFilter ? 'bg-primary text-white' : 'bg-white text-gray-700 border border-gray-200 hover:border-primary'}`}
-              >
-                {t('home.best_of_all')}
-              </button>
               {BEST_OF_OPTIONS.map(opt => (
                 <button key={opt} onClick={() => setBestOfFilter(opt)}
                   className={`px-5 py-2 text-sm font-medium rounded-sm transition-all ${bestOfFilter === opt ? 'bg-primary text-white' : 'bg-white text-gray-700 border border-gray-200 hover:border-primary'}`}
