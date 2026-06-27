@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart } from '../context/CartContext';
+import { useCart, createCartItem } from '../context/CartContext';
 import { api, resolveImageUrl, Product, Category } from '../utils/api';
 
 const BEST_OF_OPTIONS = ['study', 'work', 'gaming'] as const;
@@ -21,6 +21,8 @@ export default function HomePage() {
   const [filterRam, setFilterRam] = useState('');
   const [filterStorage, setFilterStorage] = useState('');
   const [filterOptions, setFilterOptions] = useState<{ brands: string[]; rams: string[]; storages: string[] }>({ brands: [], rams: [], storages: [] });
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   const buildFilterQuery = useCallback(() => {
     const params = new URLSearchParams();
@@ -63,6 +65,8 @@ export default function HomePage() {
     loadFiltered();
   }, [buildFilterQuery]);
 
+  useEffect(() => { setCurrentPage(1); }, [selectedCategory, filterBrand, filterRam, filterStorage]);
+
   const bestOfFiltered = bestOfFilter
     ? allProducts.filter(p => p.best_of === (
         bestOfFilter === 'study' ? 'الدراسة' :
@@ -74,6 +78,12 @@ export default function HomePage() {
   const filteredProducts = selectedCategory
     ? allProducts.filter((p) => p.category_name?.toLowerCase() === categories.find(c => c.slug === selectedCategory)?.name?.toLowerCase())
     : allProducts;
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE)), [filteredProducts]);
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, currentPage]);
 
   const formatPrice = (price: number) => price.toLocaleString() + ' DA';
 
@@ -228,7 +238,7 @@ export default function HomePage() {
             <p className="text-gray-500">{t('home.no_products')}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {filteredProducts.map((product) => (
+              {paginatedProducts.map((product) => (
                 <div key={product.id} className="card p-5 group hover:shadow-md hover:border-[#3D1534] transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
                     <div className="bg-white rounded-sm h-48 flex items-center justify-center mb-4 border border-gray-100 overflow-hidden">
@@ -253,19 +263,11 @@ export default function HomePage() {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => addItem({
-                        productId: product.id, productName: product.name, productSlug: product.slug,
-                        productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                        selectedRam: '', selectedStorage: '', selectedHdd: '',
-                      })} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
+                      <button onClick={() => addItem(createCartItem(product))} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
                         {t('product.add_to_cart')}
                       </button>
                       <button onClick={() => {
-                        addItem({
-                          productId: product.id, productName: product.name, productSlug: product.slug,
-                          productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                          selectedRam: '', selectedStorage: '', selectedHdd: '',
-                        });
+                        addItem(createCartItem(product));
                         navigate('/product/' + product.slug);
                       }} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
                         {t('product.place_order')}
@@ -274,6 +276,37 @@ export default function HomePage() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm font-medium rounded-sm border border-gray-200 bg-white text-gray-700 hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                &laquo;
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`px-4 py-2 text-sm font-medium rounded-sm transition-colors ${
+                    page === currentPage
+                      ? 'bg-primary text-white'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:border-primary'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm font-medium rounded-sm border border-gray-200 bg-white text-gray-700 hover:border-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                &raquo;
+              </button>
             </div>
           )}
         </div>

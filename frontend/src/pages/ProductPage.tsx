@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart } from '../context/CartContext';
+import { useCart, createCartItem } from '../context/CartContext';
 import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
@@ -116,11 +116,7 @@ export default function ProductPage() {
   const handleAddToCart = () => {
     if (!product) return;
     addItem({
-      productId: product.id,
-      productName: product.name,
-      productSlug: product.slug,
-      productImage: resolveImageUrl(product.image_url || ''),
-      quantity,
+      ...createCartItem(product, { quantity }),
       unitPrice,
       selectedRam: selectedAttrs['RAM'] || '',
       selectedStorage: selectedAttrs['Storage'] || '',

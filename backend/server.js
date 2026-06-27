@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -17,12 +18,14 @@ async function start() {
   const exchangesRouter = require('./routes/exchanges');
   const adminRouter = require('./routes/admin');
   const { apiLimiter } = require('./middleware/rateLimiter');
+const { authenticateToken } = require('./middleware/auth');
 
   app = express();
   const PORT = process.env.PORT || 3001;
 
+  const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000').split(',');
   app.use(cors({
-    origin: true, // أو يمكنك كتابة '*' إذا لم تكن تستخدم credentials
+    origin: CORS_ORIGINS,
     credentials: true
   }));
   app.use(express.json({ limit: '50mb' }));
@@ -53,32 +56,32 @@ async function start() {
     });
   });
 
-  function seedDatabase() {
-    const adminExists = prepare('SELECT id FROM admin_users LIMIT 1').get();
-    if (!adminExists) {
+  async function seedDatabase() {
+    const adminRow = await prepare('SELECT id FROM admin_users LIMIT 1').get();
+    if (!adminRow) {
       const hash = bcrypt.hashSync('mitsrtb26', 10);
-      prepare('INSERT INTO admin_users (username, password_hash, full_name, role) VALUES (?, ?, ?, ?)')
+      await prepare('INSERT INTO admin_users (username, password_hash, full_name, role) VALUES ($1, $2, $3, $4)')
         .run('lamaisoncd', hash, 'Administrator', 'superadmin');
     }
 
-    const catCount = prepare('SELECT COUNT(*) as c FROM categories').get().c;
-    if (catCount === 0) {
-      prepare('INSERT INTO categories (name, slug, description, sort_order) VALUES (?, ?, ?, ?)').run('Laptop', 'laptop', 'High-performance laptops and notebooks', 1);
-      prepare('INSERT INTO categories (name, slug, description, sort_order) VALUES (?, ?, ?, ?)').run('Accessory', 'accessory', 'Laptop accessories and peripherals', 2);
+    const catRow = await prepare('SELECT COUNT(*)::int as c FROM categories').get();
+    if (catRow.c === 0) {
+      await prepare('INSERT INTO categories (name, slug, description, sort_order) VALUES ($1, $2, $3, $4)').run('Laptop', 'laptop', 'High-performance laptops and notebooks', 1);
+      await prepare('INSERT INTO categories (name, slug, description, sort_order) VALUES ($1, $2, $3, $4)').run('Accessory', 'accessory', 'Laptop accessories and peripherals', 2);
     }
 
-    const brandCount = prepare('SELECT COUNT(*) as c FROM brands').get().c;
-    if (brandCount === 0) {
-      prepare('INSERT INTO brands (name) VALUES (?)').run('Asus');
-      prepare('INSERT INTO brands (name) VALUES (?)').run('HP');
-      prepare('INSERT INTO brands (name) VALUES (?)').run('Dell');
-      prepare('INSERT INTO brands (name) VALUES (?)').run('Lenovo');
-      prepare('INSERT INTO brands (name) VALUES (?)').run('Apple');
+    const brandRow = await prepare('SELECT COUNT(*)::int as c FROM brands').get();
+    if (brandRow.c === 0) {
+      await prepare('INSERT INTO brands (name) VALUES ($1)').run('Asus');
+      await prepare('INSERT INTO brands (name) VALUES ($1)').run('HP');
+      await prepare('INSERT INTO brands (name) VALUES ($1)').run('Dell');
+      await prepare('INSERT INTO brands (name) VALUES ($1)').run('Lenovo');
+      await prepare('INSERT INTO brands (name) VALUES ($1)').run('Apple');
     }
 
-    const prodCount = prepare('SELECT COUNT(*) as c FROM products').get().c;
-    if (prodCount === 0) {
-      var laptops = [
+    const prodRow = await prepare('SELECT COUNT(*)::int as c FROM products').get();
+    if (prodRow.c === 0) {
+      const laptops = [
         [1, 'Asus ROG Zephyrus G14', 'asus-rog-zephyrus-g14', 'Premium gaming laptop with AMD Ryzen 9, NVIDIA RTX 4060, 14-inch QHD display, and 16GB RAM.', 'Ryzen 9 | RTX 4060 | 14" QHD | 16GB RAM', 249900, 200000, 2000, 5000, 3000, 15, 'الألعاب', '', JSON.stringify([{ name: 'Color', values: ['Eclipse Gray', 'Moonlight White'] }, { name: 'RAM', values: ['16GB', '32GB'] }, { name: 'Storage', values: ['500GB HDD', '1TB HDD', '512GB SSD', '1TB SSD'] }])],
         [1, 'Asus ZenBook 14 OLED', 'asus-zenbook-14-oled', 'Ultraportable laptop with Intel Core Ultra 7, 14-inch OLED display, and all-day battery.', 'Core Ultra 7 | 14" OLED | 16GB RAM | 1TB SSD', 189900, 152000, 2000, 4000, 3000, 12, 'الدراسة', '', JSON.stringify([{ name: 'Color', values: ['Ponder Blue', 'Foggy Silver'] }, { name: 'RAM', values: ['16GB', '32GB'] }])],
         [1, 'Asus TUF Gaming A15', 'asus-tuf-gaming-a15', 'Durable gaming laptop with AMD Ryzen 7, RTX 3050, 15.6-inch FHD 144Hz display.', 'Ryzen 7 | RTX 3050 | 15.6" FHD | 16GB RAM', 179900, 144000, 2000, 4000, 2500, 20, 'الألعاب', '', JSON.stringify([{ name: 'Color', values: ['Mecha Gray', 'Jaeger Gray'] }, { name: 'Storage', values: ['500GB HDD', '1TB HDD', '512GB SSD', '1TB SSD'] }])],
@@ -100,19 +103,19 @@ async function start() {
         [1, 'Apple MacBook Pro 16 M4 Max', 'macbook-pro-16-m4-max', 'Flagship professional laptop with Apple M4 Max chip, 16.2-inch Liquid Retina XDR display, and extreme power.', 'Apple M4 Max | 16.2" Liquid Retina XDR | 36GB RAM | 1TB SSD', 499900, 400000, 3000, 12000, 6000, 10, 'العمل', '', JSON.stringify([{ name: 'Color', values: ['Silver', 'Space Black'] }, { name: 'RAM', values: ['36GB', '64GB', '128GB'] }, { name: 'Storage', values: ['500GB HDD', '1TB HDD', '1TB SSD', '2TB SSD', '4TB SSD'] }])],
         [1, 'Apple MacBook Air M2', 'macbook-air-m2', 'Slim and capable laptop with Apple M2 chip, 13.6-inch Liquid Retina display, and MagSafe charging.', 'Apple M2 | 13.6" Liquid Retina | 8GB RAM | 256GB SSD', 149900, 120000, 2000, 4000, 2500, 25, 'الدراسة', '', JSON.stringify([{ name: 'Color', values: ['Midnight', 'Starlight', 'Space Gray', 'Silver'] }, { name: 'RAM', values: ['8GB', '16GB'] }, { name: 'Storage', values: ['256GB SSD', '500GB HDD', '1TB HDD', '512GB SSD'] }])],
       ];
-      laptops.forEach(function(l) {
-        prepare('INSERT INTO products (category_id, name, slug, description, short_description, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, best_of, image_url, attributes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(l[0], l[1], l[2], l[3], l[4], l[5], l[6], l[7], l[8], l[9], l[10], l[11], l[12], l[13]);
-      });
+      for (const l of laptops) {
+        await prepare('INSERT INTO products (category_id, name, slug, description, short_description, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, best_of, image_url, attributes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)').run(...l);
+      }
 
-      prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES (?, ?, ?, ?)').run(1, 2, 4, 3);
-      prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES (?, ?, ?, ?)').run(1, 5, null, 7);
-      prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES (?, ?, ?, ?)').run(5, 2, 4, 4);
-      prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES (?, ?, ?, ?)').run(9, 2, 4, 3);
-      prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES (?, ?, ?, ?)').run(13, 2, null, 5);
-      prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES (?, ?, ?, ?)').run(17, 2, 4, 3);
-      prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES (?, ?, ?, ?)').run(17, 5, null, 8);
+      await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(1, 2, 4, 3);
+      await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(1, 5, null, 7);
+      await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(5, 2, 4, 4);
+      await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(9, 2, 4, 3);
+      await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(13, 2, null, 5);
+      await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(17, 2, 4, 3);
+      await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(17, 5, null, 8);
 
-      var attrData = [
+      const attrData = [
         [1, 'Color', ['Eclipse Gray', 0], ['Moonlight White', 0]], [1, 'RAM', ['16GB', 0], ['32GB', 15000]], [1, 'Storage', ['500GB HDD', -5000], ['1TB HDD', -3000], ['512GB SSD', 0], ['1TB SSD', 20000]],
         [2, 'Color', ['Ponder Blue', 0], ['Foggy Silver', 0]], [2, 'RAM', ['16GB', 0], ['32GB', 15000]],
         [3, 'Color', ['Mecha Gray', 0], ['Jaeger Gray', 0]], [3, 'Storage', ['500GB HDD', -5000], ['1TB HDD', -3000], ['512GB SSD', 0], ['1TB SSD', 20000]],
@@ -134,12 +137,12 @@ async function start() {
         [19, 'Color', ['Silver', 0], ['Space Black', 0]], [19, 'RAM', ['36GB', 0], ['64GB', 25000], ['128GB', 50000]], [19, 'Storage', ['500GB HDD', -8000], ['1TB HDD', -3000], ['1TB SSD', 0], ['2TB SSD', 30000], ['4TB SSD', 60000]],
         [20, 'Color', ['Midnight', 0], ['Starlight', 0], ['Space Gray', 0], ['Silver', 0]], [20, 'RAM', ['8GB', 0], ['16GB', 15000]], [20, 'Storage', ['128GB SSD', -5000], ['256GB SSD', 0], ['500GB HDD', -8000], ['1TB HDD', -3000], ['512GB SSD', 15000]],
       ];
-      attrData.forEach(function(a) {
-        var pid = a[0], name = a[1];
-        for (var i = 2; i < a.length; i++) {
-          prepare('INSERT INTO product_attributes (product_id, attribute_name, attribute_value, price_modifier) VALUES (?, ?, ?, ?)').run(pid, name, a[i][0], a[i][1]);
+      for (const a of attrData) {
+        const pid = a[0], name = a[1];
+        for (let i = 2; i < a.length; i++) {
+          await prepare('INSERT INTO product_attributes (product_id, attribute_name, attribute_value, price_modifier) VALUES ($1, $2, $3, $4)').run(pid, name, a[i][0], a[i][1]);
         }
-      });
+      }
 
       const offices = [
         ['Algiers', 'Algiers Downtown Office', '123 Rue Didouche Mourad, Algiers Center', '+213 21 63 10 00'],
@@ -153,23 +156,25 @@ async function start() {
         ['Setif', 'Setif Office', '25 Avenue de l\'ALN, Setif', '+213 36 91 10 00'],
         ['Tizi Ouzou', 'Tizi Ouzou Office', '15 Rue Abane Ramdane, Tizi Ouzou', '+213 26 21 30 00'],
       ];
-      offices.forEach(o => prepare('INSERT INTO shipping_offices (province, office_name, address, phone) VALUES (?, ?, ?, ?)').run(...o));
+      for (const o of offices) {
+        await prepare('INSERT INTO shipping_offices (province, office_name, address, phone) VALUES ($1, $2, $3, $4)').run(...o);
+      }
     }
 
-    const productsWithoutBrand = prepare('SELECT COUNT(*) as c FROM products WHERE brand_id IS NULL').get().c;
-    if (productsWithoutBrand > 0) {
-      const brands = prepare('SELECT id, name FROM brands').all();
-      brands.forEach(b => {
-        prepare("UPDATE products SET brand_id = ? WHERE name LIKE ? AND brand_id IS NULL").run(b.id, b.name + '%');
-      });
+    const prodNoBrand = await prepare('SELECT COUNT(*)::int as c FROM products WHERE brand_id IS NULL').get();
+    if (prodNoBrand.c > 0) {
+      const brands = await prepare('SELECT id, name FROM brands').all();
+      for (const b of brands) {
+        await prepare("UPDATE products SET brand_id = $1 WHERE name LIKE $2 AND brand_id IS NULL").run(b.id, b.name + '%');
+      }
     }
   }
 
-  seedDatabase();
+  await seedDatabase();
 
-  app.get('/api/seed', (req, res) => {
+  app.get('/api/seed', authenticateToken, async (req, res) => {
     try {
-      seedDatabase();
+      await seedDatabase();
       res.json({ success: true, message: 'Database seeded successfully.' });
     } catch (err) {
       res.status(500).json({ error: err.message });

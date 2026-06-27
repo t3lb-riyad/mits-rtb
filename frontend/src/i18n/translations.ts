@@ -18,6 +18,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'home.best_of_gaming': 'Gaming',
     'home.all_products': 'All Products',
     'home.no_products': 'No products found in this category.',
+
     'home.filter_brand': 'Brand',
     'home.filter_ram': 'RAM',
     'home.filter_storage': 'Storage',
@@ -126,6 +127,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'home.best_of_gaming': 'الألعاب',
     'home.all_products': 'جميع المنتجات',
     'home.no_products': 'لا توجد منتجات في هذا القسم.',
+
     'home.filter_brand': 'الماركة',
     'home.filter_ram': 'الرام',
     'home.filter_storage': 'المساحة',
@@ -234,6 +236,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'home.best_of_gaming': 'Gaming',
     'home.all_products': 'Tous les Produits',
     'home.no_products': 'Aucun produit trouvé dans cette catégorie.',
+
     'home.filter_brand': 'Marque',
     'home.filter_ram': 'RAM',
     'home.filter_storage': 'Stockage',

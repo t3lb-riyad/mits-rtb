@@ -3,12 +3,16 @@ const router = express.Router();
 const { prepare } = require('../models/database');
 const { generateOrderNumber, validatePhone, normalizePhone, calculateRiskScore } = require('../utils/helpers');
 const { orderLimiter } = require('../middleware/rateLimiter');
+const { sanitizeInput } = require('../utils/sanitize');
 
-router.post('/', orderLimiter, (req, res) => {
+router.post('/', orderLimiter, async (req, res) => {
   try {
-    const { customer_name, customer_phone, customer_email, customer_address, customer_city, customer_province,
+    let { customer_name, customer_phone, customer_email, customer_address, customer_city, customer_province,
       items, product_id, product_name, quantity, unit_price, shipping_method, shipping_office_id, shipping_office_name, notes, attributes,
       selected_ram, selected_storage, selected_hdd, discount_percent, discount_amount, total_amount: bodyTotalAmount } = req.body;
+    const sanitized = sanitizeInput({ customer_name, customer_email, customer_address, notes }, ['customer_name', 'customer_email', 'customer_address', 'notes']);
+    customer_name = sanitized.customer_name; customer_email = sanitized.customer_email;
+    customer_address = sanitized.customer_address; notes = sanitized.notes;
 
     if (!customer_name || !customer_phone || !shipping_method) {
       return res.status(400).json({ error: 'Missing required fields: name, phone, shipping method.' });
@@ -19,7 +23,7 @@ router.post('/', orderLimiter, (req, res) => {
 
     const phone = normalizePhone(customer_phone);
 
-    const blocked = prepare('SELECT * FROM blacklist WHERE phone = ?').get(phone);
+    const blocked = await prepare('SELECT * FROM blacklist WHERE phone = $1').get(phone);
     if (blocked) {
       return res.status(403).json({ error: 'This phone number is blocked and cannot place orders.' });
     }
@@ -39,29 +43,29 @@ router.post('/', orderLimiter, (req, res) => {
     const discPct = discount_percent || 0;
     const discAmt = discount_amount || 0;
 
-    let customer = prepare('SELECT * FROM customers WHERE phone = ?').get(phone);
+    let customer = await prepare('SELECT * FROM customers WHERE phone = $1').get(phone);
     if (customer) {
-      prepare('UPDATE customers SET full_name = ?, email = COALESCE(?, email), address = COALESCE(?, address), city = COALESCE(?, city), province = COALESCE(?, province), updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      await prepare('UPDATE customers SET full_name = $1, email = COALESCE($2, email), address = COALESCE($3, address), city = COALESCE($4, city), province = COALESCE($5, province), updated_at = CURRENT_TIMESTAMP WHERE id = $6')
         .run(customer_name, customer_email || null, customer_address || null, customer_city || null, customer_province || null, customer.id);
     } else {
-      prepare('INSERT INTO customers (phone, full_name, email, address, city, province) VALUES (?, ?, ?, ?, ?, ?)')
+      await prepare('INSERT INTO customers (phone, full_name, email, address, city, province) VALUES ($1, $2, $3, $4, $5, $6)')
         .run(phone, customer_name, customer_email || null, customer_address || null, customer_city || null, customer_province || null);
-      customer = prepare('SELECT * FROM customers WHERE phone = ?').get(phone);
+      customer = await prepare('SELECT * FROM customers WHERE phone = $1').get(phone);
     }
 
     const riskScore = calculateRiskScore(customer);
     const isFraudFlagged = riskScore > 0.6 ? 1 : 0;
-    const recentOrders = prepare("SELECT COUNT(*) as count FROM orders WHERE customer_phone = ? AND created_at > datetime('now', '-1 hour')").get(phone);
+    const recentOrders = await prepare("SELECT COUNT(*)::int as count FROM orders WHERE customer_phone = $1 AND created_at > NOW() - INTERVAL '1 hour'").get(phone);
     const isSpam = recentOrders.count > 3 ? 1 : 0;
     const orderNum = generateOrderNumber();
 
     const firstItem = orderItems[0];
-    prepare(`
+    const result = await prepare(`
       INSERT INTO orders (order_number, customer_id, customer_phone, customer_name, customer_email,
         customer_address, customer_city, customer_province, product_id, product_name,
         quantity, unit_price, total_amount, item_count, shipping_method, shipping_office_id,
         shipping_office_name, notes, order_status, is_fraud_flagged, discount_percent, discount_amount)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'pending', $19, $20, $21)
     `).run(orderNum, customer.id, phone, customer_name, customer_email || null,
       customer_address || null, customer_city || null, customer_province || null,
       firstItem.product_id || null, firstItem.product_name || null,
@@ -69,33 +73,35 @@ router.post('/', orderLimiter, (req, res) => {
       shipping_method, shipping_office_id || null, shipping_office_name || null,
       notes || null, isFraudFlagged || isSpam, discPct, discAmt);
 
-    const newOrder = prepare('SELECT id FROM orders WHERE order_number = ?').get(orderNum);
+    const newOrder = await prepare('SELECT id FROM orders WHERE order_number = $1').get(orderNum);
 
-    orderItems.forEach(item => {
+    for (const item of orderItems) {
       const imgUrl = item.product_image || null;
       const attrs = item.attributes ? (typeof item.attributes === 'string' ? item.attributes : JSON.stringify(item.attributes)) : null;
-      prepare('INSERT INTO order_items (order_id, product_id, product_name, product_image, quantity, unit_price, attributes, selected_ram, selected_storage, selected_hdd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      await prepare('INSERT INTO order_items (order_id, product_id, product_name, product_image, quantity, unit_price, attributes, selected_ram, selected_storage, selected_hdd) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)')
         .run(newOrder.id, item.product_id || null, item.product_name, imgUrl, item.quantity || 1, item.unit_price || 0, attrs, item.selected_ram || null, item.selected_storage || null, item.selected_hdd || null);
       if (item.product_id) {
-        prepare('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?').run(item.quantity || 1, item.product_id);
+        await prepare('UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2').run(item.quantity || 1, item.product_id);
       }
-    });
+    }
 
-    prepare('INSERT INTO order_status_history (order_id, status, notes) VALUES (?, ?, ?)').run(newOrder.id, 'pending', 'Order placed');
-    prepare('UPDATE customers SET total_orders = total_orders + 1 WHERE id = ?').run(customer.id);
+    await prepare('INSERT INTO order_status_history (order_id, status, notes) VALUES ($1, $2, $3)').run(newOrder.id, 'pending', 'Order placed');
+    await prepare('UPDATE customers SET total_orders = total_orders + 1 WHERE id = $1').run(customer.id);
 
     res.status(201).json({ success: true, order_number: orderNum, message: 'Order placed successfully.', is_fraud_flagged: !!isFraudFlagged });
   } catch (err) {
-    if (err.message && err.message.includes('UNIQUE')) return res.status(409).json({ error: 'Duplicate order detected. Please try again.' });
+    if (err.message && err.message.includes('unique')) return res.status(409).json({ error: 'Duplicate order detected. Please try again.' });
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post('/abandoned', (req, res) => {
+router.post('/abandoned', async (req, res) => {
   try {
-    const { customer_phone, customer_name, product_id, product_name, quantity, total_amount } = req.body;
+    let { customer_phone, customer_name, product_id, product_name, quantity, total_amount } = req.body;
+    const sanitized = sanitizeInput({ customer_name }, ['customer_name']);
+    customer_name = sanitized.customer_name;
     if (!customer_phone || !product_id) return res.status(400).json({ error: 'Missing required fields.' });
-    prepare('INSERT INTO abandoned_carts (customer_phone, customer_name, product_id, product_name, quantity, total_amount) VALUES (?, ?, ?, ?, ?, ?)')
+    await prepare('INSERT INTO abandoned_carts (customer_phone, customer_name, product_id, product_name, quantity, total_amount) VALUES ($1, $2, $3, $4, $5, $6)')
       .run(normalizePhone(customer_phone), customer_name || null, product_id, product_name || null, quantity || 1, total_amount || 0);
     res.json({ success: true, message: 'Cart logged for recovery.' });
   } catch (err) {
@@ -103,19 +109,19 @@ router.post('/abandoned', (req, res) => {
   }
 });
 
-router.get('/lookup', (req, res) => {
+router.get('/lookup', async (req, res) => {
   try {
     const { order_number } = req.query;
     if (!order_number) return res.status(400).json({ error: 'Order number is required.' });
-    const order = prepare(`
+    const order = await prepare(`
       SELECT o.*, osh.status as last_status, osh.created_at as last_status_date
       FROM orders o
       LEFT JOIN order_status_history osh ON osh.order_id = o.id AND osh.id = (SELECT MAX(id) FROM order_status_history WHERE order_id = o.id)
-      WHERE o.order_number = ?
+      WHERE o.order_number = $1
     `).get(order_number);
     if (!order) return res.status(404).json({ error: 'Order not found.' });
-    const statusHistory = prepare('SELECT * FROM order_status_history WHERE order_id = ? ORDER BY created_at DESC').all(order.id);
-    const orderItems = prepare('SELECT * FROM order_items WHERE order_id = ? ORDER BY id').all(order.id);
+    const statusHistory = await prepare('SELECT * FROM order_status_history WHERE order_id = $1 ORDER BY created_at DESC').all(order.id);
+    const orderItems = await prepare('SELECT * FROM order_items WHERE order_id = $1 ORDER BY id').all(order.id);
     res.json({ order, statusHistory, orderItems });
   } catch (err) {
     res.status(500).json({ error: err.message });

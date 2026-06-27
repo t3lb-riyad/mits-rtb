@@ -30,6 +30,24 @@ const CartContext = createContext<CartContextType | null>(null);
 
 const STORAGE_KEY = 'mits_cart';
 
+export function createCartItem(
+  product: { id: number; name: string; slug: string; image_url?: string; base_price: number },
+  overrides?: Partial<Omit<CartItem, 'cartId' | 'productId' | 'productName' | 'productSlug' | 'productImage' | 'unitPrice'>>
+): Omit<CartItem, 'cartId'> {
+  return {
+    productId: product.id,
+    productName: product.name,
+    productSlug: product.slug,
+    productImage: product.image_url || '',
+    unitPrice: product.base_price,
+    quantity: 1,
+    selectedRam: '',
+    selectedStorage: '',
+    selectedHdd: '',
+    ...overrides,
+  };
+}
+
 function loadCart(): CartItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);

@@ -1,6 +1,13 @@
 export const API_BASE = import.meta.env.VITE_API_BASE || 'https://mits-rtb-backend.onrender.com/api/admin';
 const API = API_BASE;
 
+export function resolveImageUrl(url: string): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  const base = API_BASE.replace(/\/api\/admin$/, '');
+  return base + (url.startsWith('/') ? url : '/' + url);
+}
+
 function getToken(): string | null {
   return localStorage.getItem('admin_token');
 }
@@ -21,13 +28,13 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`${API}${endpoint}`, { ...options, headers: { ...headers, ...options?.headers } });
-  if (res.status === 401) {
-    localStorage.removeItem('admin_token');
-    window.location.href = '/';
-    throw new Error('Session expired');
-  }
   if (!res.ok) {
     const err = await safeParseJson(res).catch(() => ({ error: res.statusText }));
+    if (res.status === 401 || res.status === 403 || (err.error && (err.error.includes('token') || err.error.includes('expired')))) {
+      localStorage.removeItem('admin_token');
+      window.location.href = '/';
+      throw new Error('Session expired');
+    }
     throw new Error(err.error || `Request failed (${res.status})`);
   }
   return safeParseJson(res);

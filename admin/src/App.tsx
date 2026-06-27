@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminApi, API_BASE } from './utils/api';
+import { adminApi, API_BASE, resolveImageUrl } from './utils/api';
 
 type Page = 'dashboard' | 'orders' | 'order-detail' | 'customers' | 'customer-detail'
   | 'products' | 'categories' | 'brands' | 'analytics' | 'inventory' | 'delayed' | 'exchanges'
@@ -120,8 +120,16 @@ export default function App() {
 /* =================== DASHBOARD =================== */
 function DashboardPage() {
   const [data, setData] = useState<any>(null);
-  useEffect(() => { adminApi.get('/dashboard').then(setData).catch(console.error); }, []);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    adminApi.get('/dashboard').then(setData).catch(err => {
+      if (err.message === 'Session expired') return;
+      setError(err.message);
+      console.error(err);
+    });
+  }, []);
 
+  if (error) return <div className="text-center py-10 text-red-500">Failed to load dashboard: {error}</div>;
   if (!data) return <div className="text-center py-10 text-gray-500">Loading dashboard...</div>;
 
   const cards = [
@@ -304,7 +312,7 @@ function OrderDetailView({ orderId, onBack }: { orderId: number; onBack: () => v
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-3 py-2">
                           {(item.product_image || item.product_image_url) ? (
-                            <img src={item.product_image || item.product_image_url} alt={item.product_name} className="h-10 w-10 object-cover rounded" />
+                            <img src={resolveImageUrl(item.product_image || item.product_image_url)} alt={item.product_name} className="h-10 w-10 object-cover rounded" />
                           ) : (
                             <div className="h-10 w-10 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">-</div>
                           )}
@@ -876,7 +884,7 @@ function ProductsPage() {
               <tr key={p.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3">
                   {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} className="h-10 w-10 object-cover rounded" />
+                    <img src={resolveImageUrl(p.image_url)} alt={p.name} className="h-10 w-10 object-cover rounded" />
                   ) : (
                     <div className="h-10 w-10 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">No img</div>
                   )}
@@ -1591,7 +1599,7 @@ function SettingsPage() {
   };
 
   const deletePixel = async (id: number) => {
-    try { await adminApi.delete ? await adminApi.put(`/settings/pixels/${id}`, {}) : await adminApi.post(`/settings/pixels/${id}`, {}); load(); }
+    try { await adminApi.del(`/settings/pixels/${id}`); load(); }
     catch { /* handle */ }
   };
 
