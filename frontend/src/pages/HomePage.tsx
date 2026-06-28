@@ -159,7 +159,7 @@ export default function HomePage() {
                 return (
                 <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
-                    <div className="bg-light rounded-sm mb-4 product-img-container">
+                    <div className="bg-white rounded-sm mb-4 border border-gray-100 product-img-container">
                       {product.image_url ? (
                         <img src={resolveImageUrl(product.image_url)} alt={product.name} className="p-2 product-img" />
                       ) : (
