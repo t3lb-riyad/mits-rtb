@@ -4,6 +4,8 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { initDatabase, prepare, exec } = require('./models/database');
+const { IMGBB_API_KEY, getStorageInfo } = require('./utils/storage');
+const fs = require('fs');
 
 let app, server;
 
@@ -42,7 +44,11 @@ const { authenticateToken } = require('./middleware/auth');
       res.setHeader('Content-Type', mimeMap[ext]);
     }
     next();
-  }, express.static(path.join(__dirname, 'uploads')));
+  }, express.static(path.join(__dirname, 'uploads')), (req, res) => {
+    const placeholder = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="#f0f0f0" width="400" height="300"/><text fill="#999" font-family="Arial,sans-serif" font-size="18" text-anchor="middle" x="200" y="155">Image non disponible</text></svg>');
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.status(200).send(placeholder);
+  });
 
   app.use('/api', apiLimiter);
   app.use('/api/products', productsRouter);
@@ -206,13 +212,24 @@ const { authenticateToken } = require('./middleware/auth');
   });
 
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      storage: getStorageInfo()
+    });
   });
 
   server = app.listen(PORT, () => {
+    const storageInfo = getStorageInfo();
     console.log(`LA MAISON CD Server running on port ${PORT}`);
     console.log(`API: http://localhost:${PORT}/api`);
     console.log(`Health: http://localhost:${PORT}/api/health`);
+    console.log(`Storage mode: ${storageInfo.mode} (${storageInfo.provider})`);
+    if (!storageInfo.persistent) {
+      console.warn('WARNING: Images stored locally will be lost on server restart/deploy.');
+      console.warn('Set IMGBB_API_KEY environment variable for persistent cloud storage.');
+    }
   });
 }
 

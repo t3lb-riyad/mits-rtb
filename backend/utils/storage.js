@@ -9,6 +9,23 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+function isCloudStorage() {
+  return !!IMGBB_API_KEY;
+}
+
+function getStorageMode() {
+  return isCloudStorage() ? 'cloud' : 'local';
+}
+
+function getStorageInfo() {
+  return {
+    mode: getStorageMode(),
+    provider: isCloudStorage() ? 'imgbb' : 'local-filesystem',
+    persistent: isCloudStorage(),
+    uploadsDir: isCloudStorage() ? null : uploadsDir,
+  };
+}
+
 function uploadToImgBB(buffer, originalName) {
   return new Promise((resolve, reject) => {
     const base64 = buffer.toString('base64');
@@ -43,8 +60,10 @@ function uploadToImgBB(buffer, originalName) {
 
 function uploadLocal(buffer, originalName) {
   const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(originalName || '.jpg');
-  fs.writeFileSync(path.join(uploadsDir, filename), buffer);
-  return '/uploads/' + filename;
+  const filepath = path.join(uploadsDir, filename);
+  fs.writeFileSync(filepath, buffer);
+  const url = '/uploads/' + filename;
+  return url;
 }
 
 async function uploadImage(buffer, originalName, mimetype) {
@@ -55,4 +74,8 @@ async function uploadImage(buffer, originalName, mimetype) {
   return uploadLocal(buffer, originalName);
 }
 
-module.exports = { uploadImage, IMGBB_API_KEY };
+function getPlaceholderImage() {
+  return 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300"><rect fill="#f0f0f0" width="400" height="300"/><text fill="#999" font-family="Arial,sans-serif" font-size="14" text-anchor="middle" x="200" y="150">No Image</text></svg>');
+}
+
+module.exports = { uploadImage, IMGBB_API_KEY, getStorageMode, getStorageInfo, getPlaceholderImage };

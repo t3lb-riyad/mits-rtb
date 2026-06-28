@@ -6,7 +6,7 @@ const multer = require('multer');
 const { prepare, transaction } = require('../models/database');
 const { authenticateToken, generateToken } = require('../middleware/auth');
 const { calculateProfit } = require('../utils/helpers');
-const { uploadImage } = require('../utils/storage');
+const { uploadImage, getStorageInfo } = require('../utils/storage');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
@@ -468,6 +468,10 @@ router.post('/shipping-offices', async (req, res) => {
     await prepare('INSERT INTO shipping_offices (province, office_name, address, phone) VALUES (?, ?, ?, ?)').run(province, office_name, address || null, phone || null);
     res.status(201).json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/storage-status', (req, res) => {
+  res.json(getStorageInfo());
 });
 
 router.get('/brands', async (req, res) => {
