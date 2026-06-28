@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart, getProductDiscountPercent } from '../context/CartContext';
 import { useTranslation } from '../i18n/LanguageContext';
-import { api, resolveImageUrl } from '../utils/api';
+import { api } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
   'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira',
@@ -96,9 +96,9 @@ export default function CartPage() {
         <div className="text-6xl text-gray-300 mb-4">
           <svg className="w-24 h-24 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" /></svg>
         </div>
-        <h2 className="text-xl font-bold text-dark mb-2">Your cart is empty</h2>
-        <p className="text-gray-500 mb-6">Add some products to get started.</p>
-        <Link to="/" className="btn-primary">Browse Products</Link>
+        <h2 className="text-xl font-bold text-dark mb-2">{t('cart.empty_title')}</h2>
+        <p className="text-gray-500 mb-6">{t('cart.empty_desc')}</p>
+        <Link to="/" className="btn-primary">{t('home.hero.browse')}</Link>
       </div>
     );
   }
@@ -106,7 +106,7 @@ export default function CartPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-dark mb-6">
-        Shopping Cart ({totalItems} {totalItems === 1 ? 'item' : 'items'})
+        {t('cart.title', String(totalItems))}
       </h1>
 
       <div className="space-y-4 mb-8">
@@ -130,7 +130,7 @@ export default function CartPage() {
                   {item.selectedRam && `RAM: ${item.selectedRam}`}{item.selectedRam && (item.selectedStorage || item.selectedHdd) ? ', ' : ''}{item.selectedStorage && `Storage: ${item.selectedStorage}`}{item.selectedStorage && item.selectedHdd ? ', ' : ''}{item.selectedHdd && `HDD: ${item.selectedHdd}`}
                 </p>
               ) : null}
-              <p className="text-sm text-primary font-semibold mt-1">{Math.round(item.unitPrice).toLocaleString()} DA / unit</p>
+              <p className="text-sm text-primary font-semibold mt-1">{Math.round(item.unitPrice).toLocaleString()} {t('cart.unit_suffix')}</p>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={() => updateQuantity(item.cartId, item.quantity - 1)} className="w-7 h-7 rounded border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 text-sm">&minus;</button>
@@ -148,7 +148,7 @@ export default function CartPage() {
       <div className="card p-6 mb-8">
         <div className="border-b border-gray-100 pb-4 mb-2">
           <div className="flex justify-between items-center text-base">
-            <span className="text-gray-600">Subtotal ({totalItems} item{totalItems !== 1 ? 's' : ''})</span>
+            <span className="text-gray-600">{t('cart.subtotal')} ({totalItems})</span>
             <span className="text-gray-800 font-semibold">{Math.round(totalPrice).toLocaleString()} DA</span>
           </div>
         </div>
@@ -156,11 +156,11 @@ export default function CartPage() {
         {discountPercent > 0 && (
           <div className="bg-green-50 border border-green-100 rounded-sm p-4 mb-4">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-green-800 font-semibold text-sm">Bulk Discount ({discountPercent}% off)</span>
+              <span className="text-green-800 font-semibold text-sm">{t('cart.bulk_discount_line', String(discountPercent))}</span>
               <span className="text-green-700 font-bold">-{Math.round(discountAmount).toLocaleString()} DA</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t border-green-200">
-              <span className="text-green-900 font-bold text-lg">Total to Pay</span>
+              <span className="text-green-900 font-bold text-lg">{t('cart.total_to_pay')}</span>
               <span className="text-green-900 font-bold text-xl">{Math.round(finalTotal).toLocaleString()} DA</span>
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function CartPage() {
 
         {discountPercent === 0 && (
           <div className="flex justify-between items-center">
-            <span className="font-bold text-lg text-dark">Total</span>
+            <span className="font-bold text-lg text-dark">{t('product.total')}</span>
             <span className="font-bold text-primary text-2xl">{Math.round(totalPrice).toLocaleString()} DA</span>
           </div>
         )}
@@ -178,15 +178,15 @@ export default function CartPage() {
           return pct === 0 && i.discountTier1Percent > 0 && i.quantity < 5;
         }) && (
           <p className="text-xs text-gray-400 mt-4 text-right border-t border-gray-50 pt-3">
-            Increase quantity of select items to 5+ for a bulk discount
+            {t('cart.bulk_hint')}
           </p>
         )}
       </div>
 
       {!showForm ? (
         <div className="flex gap-4">
-          <button onClick={() => setShowForm(true)} className="btn-primary text-lg px-8 py-3">Proceed to Checkout</button>
-          <Link to="/" className="btn-secondary text-lg px-6 py-3">Continue Shopping</Link>
+          <button onClick={() => setShowForm(true)} className="btn-primary text-lg px-8 py-3">{t('cart.proceed_checkout')}</button>
+          <Link to="/" className="btn-secondary text-lg px-6 py-3">{t('product.continue_shopping')}</Link>
         </div>
       ) : (
         <div className="card p-6">

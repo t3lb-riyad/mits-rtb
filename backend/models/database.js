@@ -1,13 +1,9 @@
 const { Pool } = require('pg');
-const dns = require('dns');
 
 const isRemote = process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost') && !process.env.DATABASE_URL.includes('127.0.0.1');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ...(isRemote ? { ssl: { rejectUnauthorized: false } } : {}),
-  lookup: (hostname, options, callback) => {
-    dns.lookup(hostname, options, callback);
-  }
 });
 
 async function checkConnection() {
@@ -323,16 +319,6 @@ async function initDatabase() {
       reason TEXT,
       blocked_by TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-  await exec(`
-    CREATE TABLE IF NOT EXISTS discount_settings (
-      id SERIAL PRIMARY KEY,
-      tier1_threshold INTEGER DEFAULT 6,
-      tier1_percent NUMERIC DEFAULT 5,
-      tier2_threshold INTEGER DEFAULT 11,
-      tier2_percent NUMERIC DEFAULT 8,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
   await exec('CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders(customer_phone)');

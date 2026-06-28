@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart, createCartItem, getProductDiscountPercent, getProductTierHints } from '../context/CartContext';
+import { useCart, createCartItem, getProductDiscountPercent } from '../context/CartContext';
 import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
@@ -94,11 +94,11 @@ export default function ProductPage() {
 
   const attrPriceMod = attributes
     .filter(a => selectedAttrs[a.attribute_name] === a.attribute_value)
-    .reduce((sum, a) => sum + (a.price_modifier || 0), 0);
-  const unitPrice = product ? product.base_price + attrPriceMod : 0;
+    .reduce((sum, a) => sum + Number(a.price_modifier || 0), 0);
+  const unitPrice = product ? Number(product.base_price) + attrPriceMod : 0;
   const totalPrice = unitPrice * quantity;
-  const t1p = product?.discount_tier1_percent || 0;
-  const t2p = product?.discount_tier2_percent || 0;
+  const t1p = Number(product?.discount_tier1_percent) || 0;
+  const t2p = Number(product?.discount_tier2_percent) || 0;
   const discountPct = product ? getProductDiscountPercent(quantity, t1p, t2p) : 0;
   const discountAmt = (totalPrice * discountPct) / 100;
   const finalTotal = totalPrice - discountAmt;
@@ -297,7 +297,7 @@ export default function ProductPage() {
                   className="w-10 h-10 border border-gray-300 flex items-center justify-center text-lg hover:border-primary transition-colors">+</button>
               </div>
               {quantity >= product.stock_quantity && (
-                <p className="text-xs text-orange-600 mt-1">Max stock reached ({product.stock_quantity})</p>
+                <p className="text-xs text-orange-600 mt-1">{t('product.max_stock_reached', String(product.stock_quantity))}</p>
               )}
               <div className="mt-2 space-y-1">
                 {t1p > 0 && (
@@ -439,17 +439,17 @@ export default function ProductPage() {
                 <span>{quantity}</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-                <span>Original Price</span>
+                <span>{t('product.original_price')}</span>
                 <span>{formatPrice(totalPrice)}</span>
               </div>
               {discountPct > 0 && (
                 <>
                   <div className="flex justify-between text-sm text-green-700 font-medium mt-1">
-                    <span>Bulk Discount (-{discountPct}%)</span>
+                    <span>{t('product.bulk_discount', String(discountPct))}</span>
                     <span>-{formatPrice(discountAmt)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-green-200 text-green-900">
-                    <span>Final Price</span>
+                    <span>{t('product.final_price')}</span>
                     <span>{formatPrice(finalTotal)}</span>
                   </div>
                 </>
@@ -460,16 +460,26 @@ export default function ProductPage() {
                   <span className="text-primary">{formatPrice(totalPrice)}</span>
                 </div>
               )}
-              {quantity < 5 && t1p > 0 && (
-                <p className="text-xs text-gray-400 mt-2 text-right border-t border-gray-50 pt-2">
-                  Add {5 - quantity} more item{5 - quantity !== 1 ? 's' : ''} to get a {t1p}% bulk discount
-                </p>
-              )}
-              {quantity >= 5 && quantity < 10 && t2p > 0 && (
-                <p className="text-xs text-green-600 mt-2 text-right">
-                  Add {10 - quantity} more item{10 - quantity !== 1 ? 's' : ''} to get a {t2p}% bulk discount
-                </p>
-              )}
+              {quantity < 5 && t1p > 0 && (() => {
+                const diff = 5 - quantity;
+                return (
+                  <p className="text-xs text-gray-400 mt-2 text-right border-t border-gray-50 pt-2">
+                    {diff === 1
+                      ? t('product.add_item_discount', String(t1p))
+                      : t('product.add_items_discount', String(diff), String(t1p))}
+                  </p>
+                );
+              })()}
+              {quantity >= 5 && quantity < 10 && t2p > 0 && (() => {
+                const diff = 10 - quantity;
+                return (
+                  <p className="text-xs text-green-600 mt-2 text-right">
+                    {diff === 1
+                      ? t('product.add_item_discount', String(t2p))
+                      : t('product.add_items_discount', String(diff), String(t2p))}
+                  </p>
+                );
+              })()}
             </div>
 
             {cartAdded && (

@@ -152,7 +152,7 @@ export default function HomePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {bestOfFiltered.map((product) => {
-                const hints = getProductTierHints(product.discount_tier1_percent || 0, product.discount_tier2_percent || 0);
+                const hints = getProductTierHints(Number(product.discount_tier1_percent) || 0, Number(product.discount_tier2_percent) || 0);
                 return (
                 <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
@@ -166,7 +166,7 @@ export default function HomePage() {
                     <h3 className="font-semibold text-dark mb-2">{product.name}</h3>
                   </Link>
                   <div className="mt-auto">
-                    <span className="text-lg font-bold text-primary block mb-1">{formatPrice(product.base_price)}</span>
+                    <span className="text-lg font-bold text-primary block mb-1">{formatPrice(Number(product.base_price))}</span>
                     <div className="mb-3 space-y-0.5">
                       {hints.tier1 && <span className="text-xs text-gray-400 block">{hints.tier1}</span>}
                       {hints.tier2 && <span className="text-xs text-gray-400 block">{hints.tier2}</span>}
@@ -220,7 +220,7 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {paginatedProducts.map((product) => {
-                const hints = getProductTierHints(product.discount_tier1_percent || 0, product.discount_tier2_percent || 0);
+                const hints = getProductTierHints(Number(product.discount_tier1_percent) || 0, Number(product.discount_tier2_percent) || 0);
                 return (
                 <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
@@ -234,7 +234,7 @@ export default function HomePage() {
                     <h3 className="font-semibold text-dark mb-2">{product.name}</h3>
                   </Link>
                   <div className="mt-auto">
-                    <span className="text-lg font-bold text-primary block mb-1">{formatPrice(product.base_price)}</span>
+                    <span className="text-lg font-bold text-primary block mb-1">{formatPrice(Number(product.base_price))}</span>
                     <div className="mb-3 space-y-0.5">
                       {hints.tier1 && <span className="text-xs text-gray-400 block">{hints.tier1}</span>}
                       {hints.tier2 && <span className="text-xs text-gray-400 block">{hints.tier2}</span>}

@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 
 export function getProductDiscountPercent(qty: number, t1p: number, t2p: number): number {
-  if (qty >= 10 && t2p > 0) return t2p;
-  if (qty >= 5 && t1p > 0) return t1p;
+  if (qty >= 10 && t2p > 0) return Number(t2p);
+  if (qty >= 5 && t1p > 0) return Number(t1p);
   return 0;
 }
 
@@ -54,13 +54,13 @@ export function createCartItem(
     productName: product.name,
     productSlug: product.slug,
     productImage: product.image_url || '',
-    unitPrice: product.base_price,
+    unitPrice: Number(product.base_price),
     quantity: 1,
     selectedRam: '',
     selectedStorage: '',
     selectedHdd: '',
-    discountTier1Percent: product.discount_tier1_percent || 0,
-    discountTier2Percent: product.discount_tier2_percent || 0,
+    discountTier1Percent: Number(product.discount_tier1_percent) || 0,
+    discountTier2Percent: Number(product.discount_tier2_percent) || 0,
     ...overrides,
   };
 }

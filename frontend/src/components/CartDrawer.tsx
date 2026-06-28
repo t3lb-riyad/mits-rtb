@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function CartDrawer() {
+  const { t } = useTranslation();
   const { items, removeItem, updateQuantity, totalItems, totalPrice, discountPercent, discountAmount, finalTotal } = useCart();
   const [open, setOpen] = useState(false);
 
@@ -37,7 +39,7 @@ export default function CartDrawer() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-dark">Shopping Cart ({totalItems})</h2>
+          <h2 className="text-lg font-bold text-dark">{t('cart.title', String(totalItems))}</h2>
           <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
@@ -68,7 +70,7 @@ export default function CartDrawer() {
                   <button onClick={() => updateQuantity(item.cartId, item.quantity - 1)} className="w-6 h-6 border border-gray-300 rounded flex items-center justify-center text-xs text-gray-500 hover:bg-gray-100">&minus;</button>
                   <span className="text-xs font-medium w-5 text-center">{item.quantity}</span>
                   <button onClick={() => updateQuantity(item.cartId, item.quantity + 1)} className="w-6 h-6 border border-gray-300 rounded flex items-center justify-center text-xs text-gray-500 hover:bg-gray-100">+</button>
-                  <button onClick={() => removeItem(item.cartId)} className="ml-auto text-red-400 hover:text-red-600 text-xs font-medium">Remove</button>
+                  <button onClick={() => removeItem(item.cartId)} className="ml-auto text-red-400 hover:text-red-600 text-xs font-medium">{t('cart.remove')}</button>
                 </div>
               </div>
             </div>
@@ -78,26 +80,26 @@ export default function CartDrawer() {
         {/* Footer */}
         <div className="border-t border-gray-100 px-5 py-4 space-y-3">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500">Subtotal</span>
+            <span className="text-gray-500">{t('cart.subtotal')}</span>
             <span className="text-gray-700">{formatPrice(totalPrice)}</span>
           </div>
           {discountPercent > 0 && (
             <div className="flex justify-between items-center text-sm">
-              <span className="text-green-600 font-medium">Bulk Discount (-{discountPercent}%)</span>
+              <span className="text-green-600 font-medium">{t('cart.bulk_discount_line', String(discountPercent))}</span>
               <span className="text-green-600">-{formatPrice(discountAmount)}</span>
             </div>
           )}
           <div className="flex justify-between items-center text-base pt-2 border-t border-gray-100">
-            <span className="font-bold text-dark">Total to Pay</span>
+            <span className="font-bold text-dark">{t('cart.total_to_pay')}</span>
             <span className="font-bold text-primary text-lg">{formatPrice(discountPercent > 0 ? finalTotal : totalPrice)}</span>
           </div>
           <Link to="/cart" onClick={() => setOpen(false)}
             className="block w-full text-center py-3 bg-primary text-white font-bold uppercase tracking-wider text-sm hover:bg-blue-800 transition-colors rounded-sm">
-            View Cart & Checkout
+            {t('cart.view_checkout')}
           </Link>
           <button onClick={() => setOpen(false)}
             className="block w-full text-center py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
-            Continue Shopping
+            {t('product.continue_shopping')}
           </button>
         </div>
       </div>
