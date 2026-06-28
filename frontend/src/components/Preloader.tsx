@@ -133,7 +133,7 @@ export default function Preloader({ onFinish }: { onFinish: () => void }) {
           </div>
         </div>
 
-        <p className="text-white/50 text-[10px] sm:text-xs mb-8 tracking-[0.3em] uppercase">
+        <p className="text-[11px] sm:text-xs mb-8 tracking-[0.3em] uppercase shimmer-gold">
           MAKE IT SELF
         </p>
 
