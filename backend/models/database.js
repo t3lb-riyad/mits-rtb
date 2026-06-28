@@ -342,6 +342,8 @@ async function initDatabase() {
   await exec('CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id)');
   await exec('CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)');
   await exec('CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand_id)');
+  await exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_tier1_percent NUMERIC DEFAULT 0`);
+  await exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_tier2_percent NUMERIC DEFAULT 0`);
   await exec('CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)');
   initialized = true;
 }

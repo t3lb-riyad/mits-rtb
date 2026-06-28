@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart, createCartItem } from '../context/CartContext';
+import { useCart, createCartItem, getProductTierHints } from '../context/CartContext';
 import { api, resolveImageUrl, Product, Category } from '../utils/api';
 
 const BEST_OF_OPTIONS = ['study', 'work', 'gaming'] as const;
@@ -151,42 +151,32 @@ export default function HomePage() {
               ))}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {bestOfFiltered.map((product) => (
-                <div key={product.id} className="card p-5 group hover:shadow-md hover:border-[#3D1534] transition-all flex flex-col">
+              {bestOfFiltered.map((product) => {
+                const hints = getProductTierHints(product.discount_tier1_percent || 0, product.discount_tier2_percent || 0);
+                return (
+                <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
-                    <div className="bg-light rounded-sm h-48 flex items-center justify-center mb-4 overflow-hidden">
+                    <div className="bg-light rounded-sm h-48 flex items-center justify-center mb-4 overflow-hidden img-hover-zoom">
                       {product.image_url ? (
-                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2 img-hover-zoom-img" />
                       ) : (
-                        <span className="text-4xl text-primary group-hover:text-[#3D1534] font-bold">{product.name.charAt(0)}</span>
+                        <span className="text-4xl text-primary font-bold">{product.name.charAt(0)}</span>
                       )}
                     </div>
-                    <h3 className="font-semibold text-dark mb-2 group-hover:text-[#3D1534] transition-colors">{product.name}</h3>
-                    {product.short_description && (
-                      <p className="text-xs text-gray-500 mb-3">{product.short_description}</p>
-                    )}
+                    <h3 className="font-semibold text-dark mb-2">{product.name}</h3>
                   </Link>
                   <div className="mt-auto">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-lg font-bold text-primary group-hover:text-[#3D1534]">{formatPrice(product.base_price)}</span>
-                      {product.best_of && (
-                        <span className="text-xs bg-primary/10 group-hover:bg-[#3D1534]/10 text-primary group-hover:text-[#3D1534] px-2 py-0.5 rounded-sm font-medium">{product.best_of}</span>
-                      )}
+                    <span className="text-lg font-bold text-primary block mb-1">{formatPrice(product.base_price)}</span>
+                    <div className="mb-3 space-y-0.5">
+                      {hints.tier1 && <span className="text-xs text-gray-400 block">{hints.tier1}</span>}
+                      {hints.tier2 && <span className="text-xs text-gray-400 block">{hints.tier2}</span>}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => addItem({
-                        productId: product.id, productName: product.name, productSlug: product.slug,
-                        productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                        selectedRam: '', selectedStorage: '', selectedHdd: '',
-                      })} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
+                      <button onClick={() => addItem(createCartItem(product))} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
                         {t('product.add_to_cart')}
                       </button>
                       <button onClick={() => {
-                        addItem({
-                          productId: product.id, productName: product.name, productSlug: product.slug,
-                          productImage: product.image_url || '', quantity: 1, unitPrice: product.base_price,
-                          selectedRam: '', selectedStorage: '', selectedHdd: '',
-                        });
+                        addItem(createCartItem(product));
                         navigate('/product/' + product.slug);
                       }} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
                         {t('product.place_order')}
@@ -194,7 +184,8 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -228,29 +219,25 @@ export default function HomePage() {
             <p className="text-gray-500">{t('home.no_products')}</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {paginatedProducts.map((product) => (
-                <div key={product.id} className="card p-5 group hover:shadow-md hover:border-[#3D1534] transition-all flex flex-col">
+              {paginatedProducts.map((product) => {
+                const hints = getProductTierHints(product.discount_tier1_percent || 0, product.discount_tier2_percent || 0);
+                return (
+                <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
-                    <div className="bg-white rounded-sm h-48 flex items-center justify-center mb-4 border border-gray-100 overflow-hidden">
+                    <div className="bg-white rounded-sm h-48 flex items-center justify-center mb-4 border border-gray-100 overflow-hidden img-hover-zoom">
                       {product.image_url ? (
-                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2 img-hover-zoom-img" />
                       ) : (
-                        <span className="text-4xl text-primary group-hover:text-[#3D1534] font-bold">{product.name.charAt(0)}</span>
+                        <span className="text-4xl text-primary font-bold">{product.name.charAt(0)}</span>
                       )}
                     </div>
-                    <h3 className="font-semibold text-dark mb-2 group-hover:text-[#3D1534] transition-colors">{product.name}</h3>
-                    {product.short_description && (
-                      <p className="text-xs text-gray-500 mb-3">{product.short_description}</p>
-                    )}
+                    <h3 className="font-semibold text-dark mb-2">{product.name}</h3>
                   </Link>
                   <div className="mt-auto">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-lg font-bold text-primary group-hover:text-[#3D1534]">{formatPrice(product.base_price)}</span>
-                      {product.stock_quantity > 0 ? (
-                        <span className="text-xs text-green-600 font-medium">{t('product.in_stock')}</span>
-                      ) : (
-                        <span className="text-xs text-red-600 font-medium">{t('product.out_of_stock')}</span>
-                      )}
+                    <span className="text-lg font-bold text-primary block mb-1">{formatPrice(product.base_price)}</span>
+                    <div className="mb-3 space-y-0.5">
+                      {hints.tier1 && <span className="text-xs text-gray-400 block">{hints.tier1}</span>}
+                      {hints.tier2 && <span className="text-xs text-gray-400 block">{hints.tier2}</span>}
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => addItem(createCartItem(product))} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
@@ -265,7 +252,8 @@ export default function HomePage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {totalPages > 1 && (

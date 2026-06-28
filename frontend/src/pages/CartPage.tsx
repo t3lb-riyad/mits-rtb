@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
+import { useCart, getProductDiscountPercent } from '../context/CartContext';
 import { useTranslation } from '../i18n/LanguageContext';
 import { api, resolveImageUrl } from '../utils/api';
 
@@ -16,16 +16,10 @@ const ALGERIAN_WILAYAS = [
 
 export default function CartPage() {
   const { t } = useTranslation();
-  const { items, removeItem, updateQuantity, clearCart, totalPrice, totalItems, discountPercent, discountAmount, finalTotal, discountTiers } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, totalPrice, totalItems, discountPercent, discountAmount, finalTotal } = useCart();
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<any>(null);
-  const tierHints = useMemo(() => {
-    const sorted = [...discountTiers].sort((a, b) => a.minQty - b.minQty);
-    const next = sorted.find(t => totalItems < t.minQty);
-    const current = [...sorted].reverse().find(t => totalItems >= t.minQty);
-    return { next, current };
-  }, [totalItems, discountTiers]);
 
   const [form, setForm] = useState({
     customer_name: '', customer_phone: '', customer_email: '',
@@ -179,14 +173,12 @@ export default function CartPage() {
           </div>
         )}
 
-        {totalItems > 0 && discountPercent === 0 && tierHints.next && (
+        {items.some(i => {
+          const pct = getProductDiscountPercent(i.quantity, i.discountTier1Percent, i.discountTier2Percent);
+          return pct === 0 && i.discountTier1Percent > 0 && i.quantity < 5;
+        }) && (
           <p className="text-xs text-gray-400 mt-4 text-right border-t border-gray-50 pt-3">
-            Add {tierHints.next.minQty - totalItems} more item{tierHints.next.minQty - totalItems !== 1 ? 's' : ''} to get a {tierHints.next.percent}% bulk discount
-          </p>
-        )}
-        {discountPercent > 0 && tierHints.next && (
-          <p className="text-xs text-green-600 mt-2 text-right">
-            Add {tierHints.next.minQty - totalItems} more item{tierHints.next.minQty - totalItems !== 1 ? 's' : ''} to get a {tierHints.next.percent}% bulk discount
+            Increase quantity of select items to 5+ for a bulk discount
           </p>
         )}
       </div>

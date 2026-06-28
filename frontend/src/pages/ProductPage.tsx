@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart, createCartItem, getDiscountPercent, getNextTierHint } from '../context/CartContext';
+import { useCart, createCartItem, getProductDiscountPercent, getProductTierHints } from '../context/CartContext';
 import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
@@ -30,7 +30,7 @@ interface CheckoutForm {
 export default function ProductPage() {
   const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
-  const { addItem, discountTiers } = useCart();
+  const { addItem } = useCart();
   const [cartAdded, setCartAdded] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
@@ -97,7 +97,9 @@ export default function ProductPage() {
     .reduce((sum, a) => sum + (a.price_modifier || 0), 0);
   const unitPrice = product ? product.base_price + attrPriceMod : 0;
   const totalPrice = unitPrice * quantity;
-  const discountPct = getDiscountPercent(quantity, discountTiers);
+  const t1p = product?.discount_tier1_percent || 0;
+  const t2p = product?.discount_tier2_percent || 0;
+  const discountPct = product ? getProductDiscountPercent(quantity, t1p, t2p) : 0;
   const discountAmt = (totalPrice * discountPct) / 100;
   const finalTotal = totalPrice - discountAmt;
 
@@ -297,15 +299,12 @@ export default function ProductPage() {
               {quantity >= product.stock_quantity && (
                 <p className="text-xs text-orange-600 mt-1">Max stock reached ({product.stock_quantity})</p>
               )}
-              <div className="mt-2">
-                {discountPct > 0 ? (
-                  <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-sm">
-                    Bulk Discount Applied: {discountPct}% OFF!
-                  </span>
-                ) : (
-                  <span className="inline-block text-gray-400 text-xs">
-                    {getNextTierHint(quantity, discountTiers)}
-                  </span>
+              <div className="mt-2 space-y-1">
+                {t1p > 0 && (
+                  <span className="inline-block text-xs text-gray-400">{t1p}% for +5 pieces</span>
+                )}
+                {t2p > 0 && (
+                  <span className="inline-block text-xs text-gray-400 ml-3">{t2p}% for 10+ pieces</span>
                 )}
               </div>
             </div>
@@ -461,14 +460,14 @@ export default function ProductPage() {
                   <span className="text-primary">{formatPrice(totalPrice)}</span>
                 </div>
               )}
-              {quantity > 0 && discountPct === 0 && quantity <= 5 && (
+              {quantity < 5 && t1p > 0 && (
                 <p className="text-xs text-gray-400 mt-2 text-right border-t border-gray-50 pt-2">
-                  Add {6 - quantity} more item{6 - quantity !== 1 ? 's' : ''} to get a 5% bulk discount
+                  Add {5 - quantity} more item{5 - quantity !== 1 ? 's' : ''} to get a {t1p}% bulk discount
                 </p>
               )}
-              {discountPct === 5 && (
+              {quantity >= 5 && quantity < 10 && t2p > 0 && (
                 <p className="text-xs text-green-600 mt-2 text-right">
-                  Add {11 - quantity} more item{11 - quantity !== 1 ? 's' : ''} to get an 8% bulk discount
+                  Add {10 - quantity} more item{10 - quantity !== 1 ? 's' : ''} to get a {t2p}% bulk discount
                 </p>
               )}
             </div>

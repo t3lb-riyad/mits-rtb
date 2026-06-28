@@ -40,11 +40,24 @@ router.post('/', orderLimiter, async (req, res) => {
     const rawTotal = orderItems.reduce((sum, item) => sum + (item.unit_price || 0) * (item.quantity || 1), 0);
     const totalAmount = bodyTotalAmount !== undefined ? bodyTotalAmount : rawTotal;
     const itemCount = orderItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const ds = await prepare('SELECT tier1_threshold, tier1_percent, tier2_threshold, tier2_percent FROM discount_settings LIMIT 1').get();
-    const t1t = ds?.tier1_threshold ?? 6, t1p = ds?.tier1_percent ?? 5;
-    const t2t = ds?.tier2_threshold ?? 11, t2p = ds?.tier2_percent ?? 8;
-    const discPct = itemCount >= t2t ? Number(t2p) : itemCount >= t1t ? Number(t1p) : 0;
-    const discAmt = discPct > 0 ? Math.round(rawTotal * discPct / 100) : 0;
+
+    let discAmt = 0;
+    for (const item of orderItems) {
+      const qty = item.quantity || 1;
+      const price = item.unit_price || 0;
+      let pct = 0;
+      if (item.product_id) {
+        const prod = await prepare('SELECT discount_tier1_percent, discount_tier2_percent FROM products WHERE id = $1').get(item.product_id);
+        if (prod) {
+          const t1p = Number(prod.discount_tier1_percent) || 0;
+          const t2p = Number(prod.discount_tier2_percent) || 0;
+          if (qty >= 10 && t2p > 0) pct = t2p;
+          else if (qty >= 5 && t1p > 0) pct = t1p;
+        }
+      }
+      discAmt += pct > 0 ? Math.round(price * qty * pct / 100) : 0;
+    }
+    const discPct = rawTotal > 0 ? Math.round(discAmt / rawTotal * 100) : 0;
 
     let customer = await prepare('SELECT * FROM customers WHERE phone = $1').get(phone);
     if (customer) {

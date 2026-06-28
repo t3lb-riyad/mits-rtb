@@ -577,7 +577,7 @@ function AttrValueField({ name, value, onChange }: { name: string; value: string
 function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', slug: '', base_price: 0, cost_price: 0, stock_quantity: 0, category_id: 0, brand_id: 0, description: '', short_description: '', best_of: '', image_url: '', image_urls: [] as string[] });
+  const [form, setForm] = useState({ name: '', slug: '', base_price: 0, cost_price: 0, stock_quantity: 0, category_id: 0, brand_id: 0, description: '', short_description: '', best_of: '', image_url: '', image_urls: [] as string[], discount_tier1_percent: 0, discount_tier2_percent: 0 });
   const [brandNewName, setBrandNewName] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
   const [brands, setBrands] = useState<any[]>([]);
@@ -676,7 +676,7 @@ function ProductsPage() {
       setShowForm(false);
       setProductAttrs([]);
       setBrandNewName('');
-      setForm({ name: '', slug: '', base_price: 0, cost_price: 0, stock_quantity: 0, category_id: 0, brand_id: 0, description: '', short_description: '', best_of: '', image_url: '', image_urls: [] });
+      setForm({ name: '', slug: '', base_price: 0, cost_price: 0, stock_quantity: 0, category_id: 0, brand_id: 0, description: '', short_description: '', best_of: '', image_url: '', image_urls: [], discount_tier1_percent: 0, discount_tier2_percent: 0 });
       load();
     } catch (err: any) { alert(err.message); }
   };
@@ -718,6 +718,8 @@ function ProductsPage() {
           best_of: editingProduct.best_of || null,
           image_url: editingProduct.image_url || null,
           image_urls: editingProduct.image_urls ? JSON.stringify(editingProduct.image_urls) : null,
+          discount_tier1_percent: editingProduct.discount_tier1_percent || 0,
+          discount_tier2_percent: editingProduct.discount_tier2_percent || 0,
           product_attributes: editAttrs.filter(a => a.attribute_name && a.attribute_value)
         }),
       });
@@ -794,6 +796,14 @@ function ProductsPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
               <input type="number" value={form.stock_quantity} onChange={e => setForm(p => ({ ...p, stock_quantity: parseInt(e.target.value) }))} className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Discount 5+ (%)</label>
+              <input type="number" min="0" max="100" step="0.5" value={form.discount_tier1_percent} onChange={e => setForm(p => ({ ...p, discount_tier1_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Discount 10+ (%)</label>
+              <input type="number" min="0" max="100" step="0.5" value={form.discount_tier2_percent} onChange={e => setForm(p => ({ ...p, discount_tier2_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
@@ -876,6 +886,8 @@ function ProductsPage() {
               <th className="px-4 py-3 font-medium text-gray-600">Stock</th>
               <th className="px-4 py-3 font-medium text-gray-600">Orders</th>
               <th className="px-4 py-3 font-medium text-gray-600">Best Of</th>
+              <th className="px-4 py-3 font-medium text-gray-600">5+%</th>
+              <th className="px-4 py-3 font-medium text-gray-600">10+%</th>
               <th className="px-4 py-3 font-medium text-gray-600">Actions</th>
             </tr>
           </thead>
@@ -899,6 +911,8 @@ function ProductsPage() {
                 </td>
                 <td className="px-4 py-3">{p.order_count || 0}</td>
                 <td className="px-4 py-3">{p.best_of || '-'}</td>
+                <td className="px-4 py-3">{p.discount_tier1_percent || 0}%</td>
+                <td className="px-4 py-3">{p.discount_tier2_percent || 0}%</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <button onClick={() => { setEditingProduct({ ...p, image_urls: p.image_urls ? JSON.parse(p.image_urls) : [] }); loadEditAttrs(p.id); }} className="text-primary text-xs font-medium hover:underline">Edit</button>
@@ -962,6 +976,14 @@ function ProductsPage() {
                   <option value="العمل">العمل</option>
                   <option value="الألعاب">الألعاب</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Discount 5+ (%)</label>
+                <input type="number" min="0" max="100" step="0.5" value={editingProduct.discount_tier1_percent || 0} onChange={e => setEditingProduct(p => ({ ...p, discount_tier1_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Discount 10+ (%)</label>
+                <input type="number" min="0" max="100" step="0.5" value={editingProduct.discount_tier2_percent || 0} onChange={e => setEditingProduct(p => ({ ...p, discount_tier2_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
@@ -1592,11 +1614,6 @@ function SettingsPage() {
   const load = () => { adminApi.get<{ pixels: any[] }>('/settings').then(r => setPixels(r.pixels)).catch(console.error); };
   useEffect(load, []);
 
-  const [discountSettings, setDiscountSettings] = useState({ tier1_threshold: 6, tier1_percent: 5, tier2_threshold: 11, tier2_percent: 8 });
-  const [discountSaved, setDiscountSaved] = useState(false);
-  const loadDiscount = () => { adminApi.get<{ settings: any }>('/settings/discount').then(r => { if (r.settings) setDiscountSettings(r.settings); }).catch(console.error); };
-  useEffect(loadDiscount, []);
-
   const addPixel = async (e: React.FormEvent) => {
     e.preventDefault();
     try { await adminApi.post('/settings/pixels', form); setForm({ pixel_type: 'facebook', pixel_id: '', access_token: '', event_type: 'Purchase' }); load(); }
@@ -1606,12 +1623,6 @@ function SettingsPage() {
   const deletePixel = async (id: number) => {
     try { await adminApi.del(`/settings/pixels/${id}`); load(); }
     catch { /* handle */ }
-  };
-
-  const saveDiscount = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try { await adminApi.put('/settings/discount', discountSettings); setDiscountSaved(true); setTimeout(() => setDiscountSaved(false), 3000); }
-    catch (err: any) { alert(err.message); }
   };
 
   return (
@@ -1645,33 +1656,6 @@ function SettingsPage() {
           ))}
           {pixels.length === 0 && <p className="text-sm text-gray-500">No pixels configured.</p>}
         </div>
-      </div>
-
-      <div className="card p-6 mb-6">
-        <h2 className="section-title mb-4">Bulk Discount Settings</h2>
-        <form onSubmit={saveDiscount} className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Tier 1 Minimum Qty</label>
-            <input type="number" min="1" value={discountSettings.tier1_threshold} onChange={e => setDiscountSettings(s => ({ ...s, tier1_threshold: parseInt(e.target.value) || 0 }))} className="input-field" />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Tier 1 Discount %</label>
-            <input type="number" min="0" max="100" step="0.5" value={discountSettings.tier1_percent} onChange={e => setDiscountSettings(s => ({ ...s, tier1_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Tier 2 Minimum Qty</label>
-            <input type="number" min="1" value={discountSettings.tier2_threshold} onChange={e => setDiscountSettings(s => ({ ...s, tier2_threshold: parseInt(e.target.value) || 0 }))} className="input-field" />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Tier 2 Discount %</label>
-            <input type="number" min="0" max="100" step="0.5" value={discountSettings.tier2_percent} onChange={e => setDiscountSettings(s => ({ ...s, tier2_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
-          </div>
-          <div className="sm:col-span-4 flex items-center gap-3">
-            <button type="submit" className="btn-primary">Save Discount Settings</button>
-            {discountSaved && <span className="text-sm text-green-700 font-medium">Saved!</span>}
-          </div>
-        </form>
-        <p className="text-xs text-gray-500">Tier 2 (higher qty) takes priority over Tier 1. Changes apply immediately to all new orders and cart calculations.</p>
       </div>
 
       <div className="card p-6">

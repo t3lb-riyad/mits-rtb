@@ -46,6 +46,8 @@ export interface Product {
   attributes: string;
   category_name: string;
   brand_name: string | null;
+  discount_tier1_percent?: number;
+  discount_tier2_percent?: number;
 }
 
 export interface ProductOffer {

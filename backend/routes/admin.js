@@ -271,14 +271,15 @@ router.get('/products', async (req, res) => {
 
 router.post('/products', async (req, res) => {
   try {
-    const { name, slug, description, short_description, category_id, brand_id, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, low_stock_threshold, best_of, image_url, image_urls, attributes, product_attributes } = req.body;
+    const { name, slug, description, short_description, category_id, brand_id, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, low_stock_threshold, best_of, image_url, image_urls, attributes, discount_tier1_percent, discount_tier2_percent, product_attributes } = req.body;
     if (!name || !slug || !base_price) return res.status(400).json({ error: 'Name, slug, and base price are required.' });
     const finalImageUrl = await processImageUrl(image_url);
     const finalImageUrls = await processImageUrls(image_urls);
-    const result = await prepare(`INSERT INTO products (name, slug, description, short_description, category_id, brand_id, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, low_stock_threshold, best_of, image_url, image_urls, attributes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    const result = await prepare(`INSERT INTO products (name, slug, description, short_description, category_id, brand_id, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, low_stock_threshold, best_of, image_url, image_urls, attributes, discount_tier1_percent, discount_tier2_percent) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
       name, slug, description || null, short_description || null, category_id || null, brand_id || null, base_price,
       cost_price || 0, shipping_cost || 0, ad_cost || 0, overhead_cost || 0,
-      stock_quantity || 0, low_stock_threshold || 10, best_of || null, finalImageUrl, finalImageUrls, attributes || null);
+      stock_quantity || 0, low_stock_threshold || 10, best_of || null, finalImageUrl, finalImageUrls, attributes || null,
+      discount_tier1_percent || 0, discount_tier2_percent || 0);
     const productId = result.lastInsertRowid;
     if (product_attributes && Array.isArray(product_attributes)) {
       for (const a of product_attributes) {
@@ -298,7 +299,7 @@ router.put('/products/:id', async (req, res) => {
       req.body.image_urls = await processImageUrls(req.body.image_urls);
     }
     const fields = []; const params = [];
-    const allowed = ['name', 'slug', 'description', 'short_description', 'category_id', 'brand_id', 'base_price', 'cost_price', 'shipping_cost', 'ad_cost', 'overhead_cost', 'stock_quantity', 'low_stock_threshold', 'best_of', 'is_active', 'image_url', 'image_urls', 'attributes'];
+    const allowed = ['name', 'slug', 'description', 'short_description', 'category_id', 'brand_id', 'base_price', 'cost_price', 'shipping_cost', 'ad_cost', 'overhead_cost', 'stock_quantity', 'low_stock_threshold', 'best_of', 'is_active', 'image_url', 'image_urls', 'attributes', 'discount_tier1_percent', 'discount_tier2_percent'];
     allowed.forEach(f => { if (req.body[f] !== undefined) { fields.push(`${f} = ?`); params.push(req.body[f]); } });
     if (fields.length === 0 && !req.body.product_attributes) return res.status(400).json({ error: 'No fields to update.' });
     if (fields.length > 0) {
@@ -460,32 +461,6 @@ router.post('/settings/pixels', async (req, res) => {
 router.delete('/settings/pixels/:id', async (req, res) => {
   try { await prepare('DELETE FROM tracking_pixels WHERE id = ?').run(req.params.id); res.json({ success: true }); }
   catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-router.get('/settings/discount', async (req, res) => {
-  try {
-    let row = await prepare('SELECT * FROM discount_settings LIMIT 1').get();
-    if (!row) {
-      await prepare('INSERT INTO discount_settings (tier1_threshold, tier1_percent, tier2_threshold, tier2_percent) VALUES ($1, $2, $3, $4)').run(6, 5, 11, 8);
-      row = await prepare('SELECT * FROM discount_settings LIMIT 1').get();
-    }
-    res.json({ settings: row });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-router.put('/settings/discount', async (req, res) => {
-  try {
-    const { tier1_threshold, tier1_percent, tier2_threshold, tier2_percent } = req.body;
-    const row = await prepare('SELECT id FROM discount_settings LIMIT 1').get();
-    if (row) {
-      await prepare('UPDATE discount_settings SET tier1_threshold = $1, tier1_percent = $2, tier2_threshold = $3, tier2_percent = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5')
-        .run(tier1_threshold, tier1_percent, tier2_threshold, tier2_percent, row.id);
-    } else {
-      await prepare('INSERT INTO discount_settings (tier1_threshold, tier1_percent, tier2_threshold, tier2_percent) VALUES ($1, $2, $3, $4)')
-        .run(tier1_threshold, tier1_percent, tier2_threshold, tier2_percent);
-    }
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/shipping-offices', async (req, res) => {

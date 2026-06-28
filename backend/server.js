@@ -41,14 +41,6 @@ const { authenticateToken } = require('./middleware/auth');
   app.use('/api/exchanges', exchangesRouter);
   app.use('/api/admin', adminRouter);
 
-  app.get('/api/settings/discount', async (req, res) => {
-    try {
-      let row = await prepare('SELECT tier1_threshold, tier1_percent, tier2_threshold, tier2_percent FROM discount_settings LIMIT 1').get();
-      if (!row) row = { tier1_threshold: 6, tier1_percent: 5, tier2_threshold: 11, tier2_percent: 8 };
-      res.json({ settings: row });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-  });
-
   app.get('/api/config', (req, res) => {
     res.json({
       site_name: 'LA MAISON CD',
@@ -112,7 +104,9 @@ const { authenticateToken } = require('./middleware/auth');
         [1, 'Apple MacBook Air M2', 'macbook-air-m2', 'Slim and capable laptop with Apple M2 chip, 13.6-inch Liquid Retina display, and MagSafe charging.', 'Apple M2 | 13.6" Liquid Retina | 8GB RAM | 256GB SSD', 149900, 120000, 2000, 4000, 2500, 25, 'الدراسة', '', JSON.stringify([{ name: 'Color', values: ['Midnight', 'Starlight', 'Space Gray', 'Silver'] }, { name: 'RAM', values: ['8GB', '16GB'] }, { name: 'Storage', values: ['256GB SSD', '500GB HDD', '1TB HDD', '512GB SSD'] }])],
       ];
       for (const l of laptops) {
-        await prepare('INSERT INTO products (category_id, name, slug, description, short_description, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, best_of, image_url, attributes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)').run(...l);
+        const discount_t1 = Math.min(5, Math.max(2, Math.round((l[5] - l[6]) / l[5] * 100 / 6) * 2));
+        const discount_t2 = Math.min(8, Math.max(4, discount_t1 + 3));
+        await prepare('INSERT INTO products (category_id, name, slug, description, short_description, base_price, cost_price, shipping_cost, ad_cost, overhead_cost, stock_quantity, best_of, image_url, attributes, discount_tier1_percent, discount_tier2_percent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)').run(...l, discount_t1, discount_t2);
       }
 
       await prepare('INSERT INTO product_offers (product_id, min_quantity, max_quantity, discount_percent) VALUES ($1, $2, $3, $4)').run(1, 2, 4, 3);
@@ -169,9 +163,15 @@ const { authenticateToken } = require('./middleware/auth');
       }
     }
 
-    const dsRow = await prepare('SELECT COUNT(*)::int as c FROM discount_settings').get();
-    if (dsRow.c === 0) {
-      await prepare('INSERT INTO discount_settings (tier1_threshold, tier1_percent, tier2_threshold, tier2_percent) VALUES ($1, $2, $3, $4)').run(6, 5, 11, 8);
+    const prodNoDisc = await prepare("SELECT COUNT(*)::int as c FROM products WHERE discount_tier1_percent = 0 AND discount_tier2_percent = 0 AND base_price > 0").get();
+    if (prodNoDisc.c > 0) {
+      const undiscounted = await prepare('SELECT id, base_price, cost_price FROM products WHERE discount_tier1_percent = 0 AND discount_tier2_percent = 0 AND base_price > 0').all();
+      for (const p of undiscounted) {
+        const margin = (Number(p.base_price) - Number(p.cost_price || 0)) / Number(p.base_price);
+        const t1 = Math.min(5, Math.max(2, Math.round(margin * 100 / 6) * 2));
+        const t2 = Math.min(8, Math.max(4, t1 + 3));
+        await prepare('UPDATE products SET discount_tier1_percent = $1, discount_tier2_percent = $2 WHERE id = $3').run(t1, t2, p.id);
+      }
     }
 
     const prodNoBrand = await prepare('SELECT COUNT(*)::int as c FROM products WHERE brand_id IS NULL').get();
