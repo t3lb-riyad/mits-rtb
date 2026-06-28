@@ -5,6 +5,7 @@ import { useCart, createCartItem, getProductTierHints } from '../context/CartCon
 import { api, resolveImageUrl, Product, Category } from '../utils/api';
 
 const BEST_OF_OPTIONS = ['study', 'work', 'gaming'] as const;
+const PRICE_OPTIONS = [20000, 40000, 60000, 80000, 100000, 200000, 500000];
 
 export default function HomePage() {
   const { t } = useTranslation();
@@ -20,6 +21,7 @@ export default function HomePage() {
   const [filterBrand, setFilterBrand] = useState('');
   const [filterRam, setFilterRam] = useState('');
   const [filterStorage, setFilterStorage] = useState('');
+  const [filterPrice, setFilterPrice] = useState('');
   const [filterOptions, setFilterOptions] = useState<{ brands: string[]; rams: string[]; storages: string[] }>({ brands: [], rams: [], storages: [] });
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 10;
@@ -65,14 +67,15 @@ export default function HomePage() {
     loadFiltered();
   }, [buildFilterQuery]);
 
-  useEffect(() => { setCurrentPage(1); }, [selectedCategory, filterBrand, filterRam, filterStorage]);
+  useEffect(() => { setCurrentPage(1); }, [selectedCategory, filterBrand, filterRam, filterStorage, filterPrice]);
 
   const BEST_OF_MAP: Record<string, string> = { study: 'الدراسة', work: 'العمل', gaming: 'الألعاب' };
   const bestOfFiltered = allProducts.filter(p => p.best_of === BEST_OF_MAP[bestOfFilter]);
 
-  const filteredProducts = selectedCategory
+  const filteredProducts = (selectedCategory
     ? allProducts.filter((p) => p.category_name?.toLowerCase() === categories.find(c => c.slug === selectedCategory)?.name?.toLowerCase())
-    : allProducts;
+    : allProducts
+  ).filter((p) => !filterPrice || Number(p.base_price) < Number(filterPrice));
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE)), [filteredProducts]);
   const paginatedProducts = useMemo(() => {
@@ -210,8 +213,14 @@ export default function HomePage() {
               <option value="">{t('home.filter_storage')}</option>
               {filterOptions.storages.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            {(filterBrand || filterRam || filterStorage) && (
-              <button onClick={() => { setFilterBrand(''); setFilterRam(''); setFilterStorage(''); }}
+            <select value={filterPrice} onChange={e => setFilterPrice(e.target.value)} className="input-field text-sm w-auto min-w-[140px]">
+              <option value="">{t('home.filter_price')}</option>
+              {PRICE_OPTIONS.map(threshold => (
+                <option key={threshold} value={threshold}>{t('home.price_option', threshold.toLocaleString())}</option>
+              ))}
+            </select>
+            {(filterBrand || filterRam || filterStorage || filterPrice) && (
+              <button onClick={() => { setFilterBrand(''); setFilterRam(''); setFilterStorage(''); setFilterPrice(''); }}
                 className="text-xs text-red-600 font-medium hover:underline">{t('home.filter_clear')}</button>
             )}
           </div>
