@@ -23,7 +23,7 @@ const { authenticateToken } = require('./middleware/auth');
   app = express();
   const PORT = process.env.PORT || 3001;
 
-  const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000').split(',');
+  const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'https://mits-rtb-frontend.onrender.com,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000').split(',');
   app.use(cors({
     origin: CORS_ORIGINS,
     credentials: true
@@ -40,6 +40,14 @@ const { authenticateToken } = require('./middleware/auth');
   app.use('/api/orders', ordersRouter);
   app.use('/api/exchanges', exchangesRouter);
   app.use('/api/admin', adminRouter);
+
+  app.get('/api/settings/discount', async (req, res) => {
+    try {
+      let row = await prepare('SELECT tier1_threshold, tier1_percent, tier2_threshold, tier2_percent FROM discount_settings LIMIT 1').get();
+      if (!row) row = { tier1_threshold: 6, tier1_percent: 5, tier2_threshold: 11, tier2_percent: 8 };
+      res.json({ settings: row });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
 
   app.get('/api/config', (req, res) => {
     res.json({
@@ -159,6 +167,11 @@ const { authenticateToken } = require('./middleware/auth');
       for (const o of offices) {
         await prepare('INSERT INTO shipping_offices (province, office_name, address, phone) VALUES ($1, $2, $3, $4)').run(...o);
       }
+    }
+
+    const dsRow = await prepare('SELECT COUNT(*)::int as c FROM discount_settings').get();
+    if (dsRow.c === 0) {
+      await prepare('INSERT INTO discount_settings (tier1_threshold, tier1_percent, tier2_threshold, tier2_percent) VALUES ($1, $2, $3, $4)').run(6, 5, 11, 8);
     }
 
     const prodNoBrand = await prepare('SELECT COUNT(*)::int as c FROM products WHERE brand_id IS NULL').get();

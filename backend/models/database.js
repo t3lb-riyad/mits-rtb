@@ -10,6 +10,19 @@ const pool = new Pool({
   }
 });
 
+async function checkConnection() {
+  try {
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+    console.log('Supabase PostgreSQL connected successfully.');
+  } catch (err) {
+    console.error('FATAL: Cannot connect to Supabase PostgreSQL. DATABASE_URL may be incorrect.');
+    console.error('Connection error:', err.message);
+    process.exit(1);
+  }
+}
+
 let initialized = false;
 
 function convertQuery(sql) {
@@ -63,6 +76,7 @@ function transaction(fn) {
 
 async function initDatabase() {
   if (initialized) return;
+  await checkConnection();
   await exec(`
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
@@ -309,6 +323,16 @@ async function initDatabase() {
       reason TEXT,
       blocked_by TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await exec(`
+    CREATE TABLE IF NOT EXISTS discount_settings (
+      id SERIAL PRIMARY KEY,
+      tier1_threshold INTEGER DEFAULT 6,
+      tier1_percent NUMERIC DEFAULT 5,
+      tier2_threshold INTEGER DEFAULT 11,
+      tier2_percent NUMERIC DEFAULT 8,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
   await exec('CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON orders(customer_phone)');

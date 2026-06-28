@@ -1,29 +1,53 @@
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import { api } from '../utils/api';
 
-export const DISCOUNT_TIERS = [
+export interface DiscountSettings {
+  tier1_threshold: number;
+  tier1_percent: number;
+  tier2_threshold: number;
+  tier2_percent: number;
+}
+
+export interface DiscountTier {
+  minQty: number;
+  percent: number;
+  label: string;
+}
+
+export const DEFAULT_DISCOUNT_TIERS: DiscountTier[] = [
   { minQty: 11, percent: 8, label: '8%' },
   { minQty: 6, percent: 5, label: '5%' },
-] as const;
+];
 
-export function getDiscountPercent(totalQty: number): number {
-  for (const tier of DISCOUNT_TIERS) {
+export function buildTiers(settings: DiscountSettings): DiscountTier[] {
+  const tiers: DiscountTier[] = [];
+  if (settings.tier2_threshold && settings.tier2_percent) {
+    tiers.push({ minQty: settings.tier2_threshold, percent: settings.tier2_percent, label: `${settings.tier2_percent}%` });
+  }
+  if (settings.tier1_threshold && settings.tier1_percent) {
+    tiers.push({ minQty: settings.tier1_threshold, percent: settings.tier1_percent, label: `${settings.tier1_percent}%` });
+  }
+  return tiers.sort((a, b) => b.minQty - a.minQty);
+}
+
+export function getDiscountPercent(totalQty: number, tiers: DiscountTier[] = DEFAULT_DISCOUNT_TIERS): number {
+  for (const tier of tiers) {
     if (totalQty >= tier.minQty) return tier.percent;
   }
   return 0;
 }
 
-export function getDiscountLabel(totalQty: number): string | null {
-  for (const tier of DISCOUNT_TIERS) {
+export function getDiscountLabel(totalQty: number, tiers: DiscountTier[] = DEFAULT_DISCOUNT_TIERS): string | null {
+  for (const tier of tiers) {
     if (totalQty >= tier.minQty) return `${tier.percent}% OFF`;
   }
   return null;
 }
 
-export function getNextTierHint(totalQty: number): string | null {
-  for (const tier of DISCOUNT_TIERS) {
+export function getNextTierHint(totalQty: number, tiers: DiscountTier[] = DEFAULT_DISCOUNT_TIERS): string | null {
+  for (const tier of tiers) {
     if (totalQty < tier.minQty) {
-      const needed = tier.minQty - totalQty;
-      return `Order more than ${tier.minQty - 1} items for ${tier.percent}% off`;
+      return `Order ${tier.minQty}+ items for ${tier.percent}% off`;
     }
   }
   return null;
@@ -53,6 +77,7 @@ interface CartContextType {
   discountPercent: number;
   discountAmount: number;
   finalTotal: number;
+  discountTiers: DiscountTier[];
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -90,10 +115,22 @@ function generateCartId(item: Omit<CartItem, 'cartId'>): string {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(loadCart);
+  const [discountSettings, setDiscountSettings] = useState<DiscountSettings | null>(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    api.get<{ settings: DiscountSettings }>('/settings/discount')
+      .then(r => setDiscountSettings(r.settings))
+      .catch(() => setDiscountSettings(null));
+  }, []);
+
+  const discountTiers = useMemo(() => {
+    if (discountSettings) return buildTiers(discountSettings);
+    return DEFAULT_DISCOUNT_TIERS;
+  }, [discountSettings]);
 
   const addItem = (item: Omit<CartItem, 'cartId'>) => {
     const cartId = generateCartId(item);
@@ -120,14 +157,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const { totalItems, totalPrice, discountPercent, discountAmount, finalTotal } = useMemo(() => {
     const ti = items.reduce((sum, i) => sum + i.quantity, 0);
     const tp = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-    const dp = getDiscountPercent(ti);
+    const dp = getDiscountPercent(ti, discountTiers);
     const da = (tp * dp) / 100;
     const ft = tp - da;
     return { totalItems: ti, totalPrice: tp, discountPercent: dp, discountAmount: da, finalTotal: ft };
-  }, [items]);
+  }, [items, discountTiers]);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, discountPercent, discountAmount, finalTotal }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice, discountPercent, discountAmount, finalTotal, discountTiers }}>
       {children}
     </CartContext.Provider>
   );

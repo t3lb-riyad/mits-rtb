@@ -462,6 +462,32 @@ router.delete('/settings/pixels/:id', async (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+router.get('/settings/discount', async (req, res) => {
+  try {
+    let row = await prepare('SELECT * FROM discount_settings LIMIT 1').get();
+    if (!row) {
+      await prepare('INSERT INTO discount_settings (tier1_threshold, tier1_percent, tier2_threshold, tier2_percent) VALUES ($1, $2, $3, $4)').run(6, 5, 11, 8);
+      row = await prepare('SELECT * FROM discount_settings LIMIT 1').get();
+    }
+    res.json({ settings: row });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.put('/settings/discount', async (req, res) => {
+  try {
+    const { tier1_threshold, tier1_percent, tier2_threshold, tier2_percent } = req.body;
+    const row = await prepare('SELECT id FROM discount_settings LIMIT 1').get();
+    if (row) {
+      await prepare('UPDATE discount_settings SET tier1_threshold = $1, tier1_percent = $2, tier2_threshold = $3, tier2_percent = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5')
+        .run(tier1_threshold, tier1_percent, tier2_threshold, tier2_percent, row.id);
+    } else {
+      await prepare('INSERT INTO discount_settings (tier1_threshold, tier1_percent, tier2_threshold, tier2_percent) VALUES ($1, $2, $3, $4)')
+        .run(tier1_threshold, tier1_percent, tier2_threshold, tier2_percent);
+    }
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/shipping-offices', async (req, res) => {
   try {
     const { province, office_name, address, phone } = req.body;

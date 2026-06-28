@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart, createCartItem, DISCOUNT_TIERS, getDiscountPercent, getDiscountLabel, getNextTierHint } from '../context/CartContext';
+import { useCart, createCartItem, getDiscountPercent, getNextTierHint } from '../context/CartContext';
 import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
@@ -30,7 +30,7 @@ interface CheckoutForm {
 export default function ProductPage() {
   const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
-  const { addItem } = useCart();
+  const { addItem, discountTiers } = useCart();
   const [cartAdded, setCartAdded] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
@@ -304,7 +304,7 @@ export default function ProductPage() {
                   </span>
                 ) : (
                   <span className="inline-block text-gray-400 text-xs">
-                    {getNextTierHint(quantity) || `Order more than ${DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1].minQty - 1} items for ${DISCOUNT_TIERS[DISCOUNT_TIERS.length - 1].percent}% off`}
+                    {getNextTierHint(quantity, discountTiers)}
                   </span>
                 )}
               </div>
