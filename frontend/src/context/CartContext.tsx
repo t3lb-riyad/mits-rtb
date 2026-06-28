@@ -20,13 +20,13 @@ export const DEFAULT_DISCOUNT_TIERS: DiscountTier[] = [
 ];
 
 export function buildTiers(settings: DiscountSettings): DiscountTier[] {
+  const t2t = Number(settings.tier2_threshold) || 0;
+  const t2p = Number(settings.tier2_percent) || 0;
+  const t1t = Number(settings.tier1_threshold) || 0;
+  const t1p = Number(settings.tier1_percent) || 0;
   const tiers: DiscountTier[] = [];
-  if (settings.tier2_threshold && settings.tier2_percent) {
-    tiers.push({ minQty: settings.tier2_threshold, percent: settings.tier2_percent, label: `${settings.tier2_percent}%` });
-  }
-  if (settings.tier1_threshold && settings.tier1_percent) {
-    tiers.push({ minQty: settings.tier1_threshold, percent: settings.tier1_percent, label: `${settings.tier1_percent}%` });
-  }
+  if (t2t > 0 && t2p > 0) tiers.push({ minQty: t2t, percent: t2p, label: `${t2p}%` });
+  if (t1t > 0 && t1p > 0) tiers.push({ minQty: t1t, percent: t1p, label: `${t1p}%` });
   return tiers.sort((a, b) => b.minQty - a.minQty);
 }
 
@@ -156,10 +156,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const { totalItems, totalPrice, discountPercent, discountAmount, finalTotal } = useMemo(() => {
     const ti = items.reduce((sum, i) => sum + i.quantity, 0);
-    const tp = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-    const dp = getDiscountPercent(ti, discountTiers);
-    const da = (tp * dp) / 100;
-    const ft = tp - da;
+    const tp = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0) || 0;
+    const dp = getDiscountPercent(ti, discountTiers) || 0;
+    const da = tp > 0 && dp > 0 ? Math.round((tp * dp) / 100) : 0;
+    const ft = Math.max(0, tp - da);
     return { totalItems: ti, totalPrice: tp, discountPercent: dp, discountAmount: da, finalTotal: ft };
   }, [items, discountTiers]);
 

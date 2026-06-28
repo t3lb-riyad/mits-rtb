@@ -156,7 +156,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'product.city': 'المدينة',
     'product.province': 'الولاية',
     'product.notes': 'ملاحظات (اختياري)',
-    'product.place_order': 'الطلب الان',
+    'product.place_order': 'أطلب الان',
     'product.order_confirm_title': 'تم تأكيد الطلب',
     'product.order_confirm_msg': 'تم تقديم طلبك بنجاح.',
     'product.order_confirm_whatsapp': 'ستتلقى تأكيدًا عبر الواتساب.',

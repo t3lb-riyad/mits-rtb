@@ -97,7 +97,7 @@ export default function ProductPage() {
     .reduce((sum, a) => sum + (a.price_modifier || 0), 0);
   const unitPrice = product ? product.base_price + attrPriceMod : 0;
   const totalPrice = unitPrice * quantity;
-  const discountPct = getDiscountPercent(quantity);
+  const discountPct = getDiscountPercent(quantity, discountTiers);
   const discountAmt = (totalPrice * discountPct) / 100;
   const finalTotal = totalPrice - discountAmt;
 
