@@ -8,38 +8,45 @@ function easeInQuad(t: number): number {
   return t * t;
 }
 
+const FULL_TEXT = 'LA MAISON CD';
+
 export default function Preloader({ onFinish }: { onFinish: () => void }) {
   const [phase, setPhase] = useState<'forward' | 'retract' | 'fadeout' | 'hidden'>('forward');
-  const progressRef = useRef(0);
-  const rafRef = useRef<number>(0);
-  const startTimeRef = useRef(0);
+  const [progress, setProgress] = useState(0);
+  const [opacity, setOpacity] = useState(1);
+  const mountedRef = useRef(true);
+  const phaseStartRef = useRef(0);
 
   const FORWARD_DURATION = 2500;
   const RETRACT_DURATION = 600;
   const FADE_DURATION = 400;
 
   useEffect(() => {
-    startTimeRef.current = performance.now();
+    mountedRef.current = true;
+    phaseStartRef.current = performance.now();
 
     function frame(now: number) {
-      const elapsed = now - startTimeRef.current;
+      if (!mountedRef.current) return;
+      const elapsed = now - phaseStartRef.current;
 
       if (phase === 'forward') {
         const t = Math.min(elapsed / FORWARD_DURATION, 1);
-        progressRef.current = easeInOutCubic(t) * 100;
+        setProgress(easeInOutCubic(t) * 100);
         if (t >= 1) {
           setPhase('retract');
-          startTimeRef.current = now;
+          phaseStartRef.current = now;
         }
       } else if (phase === 'retract') {
         const t = Math.min(elapsed / RETRACT_DURATION, 1);
-        progressRef.current = (1 - easeInQuad(t)) * 100;
+        setProgress((1 - easeInQuad(t)) * 100);
         if (t >= 1) {
           setPhase('fadeout');
-          startTimeRef.current = now;
+          phaseStartRef.current = now;
+          setOpacity(1);
         }
       } else if (phase === 'fadeout') {
         const t = Math.min(elapsed / FADE_DURATION, 1);
+        setOpacity(1 - t);
         if (t >= 1) {
           setPhase('hidden');
           onFinish();
@@ -47,43 +54,43 @@ export default function Preloader({ onFinish }: { onFinish: () => void }) {
         }
       }
 
-      rafRef.current = requestAnimationFrame(frame);
+      requestAnimationFrame(frame);
     }
 
-    rafRef.current = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(rafRef.current);
+    requestAnimationFrame(frame);
+    return () => { mountedRef.current = false; };
   }, [phase, onFinish]);
 
   if (phase === 'hidden') return null;
 
-  const pct = progressRef.current;
-  const clipWidth = Math.max(0, Math.min(100, pct));
-  const isFading = phase === 'fadeout';
+  const clipWidth = Math.max(0, Math.min(100, progress));
 
   return (
     <div
-      style={{
-        opacity: isFading ? Math.max(0, 1 - (performance.now() - startTimeRef.current) / FADE_DURATION) : 1,
-        transition: isFading ? undefined : 'none',
-      }}
+      style={{ opacity }}
       className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#22549E] select-none"
     >
-      <div className="relative w-full max-w-md mx-auto flex flex-col items-center px-6">
-        <div className="relative h-28 w-full mb-6 flex items-center">
+      <div className="flex flex-col items-center px-6">
+        <div className="relative flex items-center justify-center mb-8">
+          <span className="invisible text-5xl sm:text-6xl font-bold tracking-[0.12em] whitespace-nowrap leading-none">
+            {FULL_TEXT}
+          </span>
+
           <div
-            className="absolute top-1/2 -translate-y-1/2 h-5 flex items-center overflow-hidden"
-            style={{ width: `${clipWidth}%`, left: 0 }}
+            className="absolute inset-0 overflow-hidden flex items-center"
+            style={{ width: `${clipWidth}%` }}
           >
-            <span className="text-white text-xl sm:text-2xl font-bold tracking-[0.15em] whitespace-nowrap">
-              LA MAISON CD
+            <span className="text-white text-5xl sm:text-6xl font-bold tracking-[0.12em] whitespace-nowrap leading-none">
+              {FULL_TEXT}
             </span>
           </div>
 
           <div
-            className="absolute top-1/2 -translate-y-1/2"
+            className="absolute"
             style={{
-              left: `calc(${clipWidth}% - 10px)`,
-              transform: 'translate(-50%, -50%)',
+              left: `${clipWidth}%`,
+              top: '50%',
+              transform: 'translate(6px, -50%)',
             }}
           >
             <svg
@@ -108,9 +115,6 @@ export default function Preloader({ onFinish }: { onFinish: () => void }) {
                   <stop offset="85%" stopColor="#b8b8b8" />
                   <stop offset="100%" stopColor="#a0a0a0" />
                 </radialGradient>
-                <clipPath id="cd-base">
-                  <circle cx="50" cy="50" r="46" />
-                </clipPath>
               </defs>
               <circle cx="50" cy="50" r="48" fill="#888" />
               <circle cx="50" cy="50" r="46" fill="url(#cd-grad)" />
@@ -129,7 +133,7 @@ export default function Preloader({ onFinish }: { onFinish: () => void }) {
           </div>
         </div>
 
-        <p className="text-white/50 text-[10px] sm:text-xs mt-2 mb-6 tracking-[0.3em] uppercase">
+        <p className="text-white/50 text-[10px] sm:text-xs mb-8 tracking-[0.3em] uppercase">
           MAKE IT SELF
         </p>
 
