@@ -25,8 +25,8 @@ export default function Footer() {
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider mb-4">{t('footer.contact')}</h4>
             <ul className="space-y-2 text-sm text-gray-300">
-              <li>Phone: +213 652 21 21 37</li>
-              <li>Email: makeitselfmits@gmail.com</li>
+              <li>{t('footer.phone_line')}</li>
+              <li>{t('footer.email_line')}</li>
             </ul>
           </div>
           <div>
@@ -37,7 +37,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
-          &copy; {new Date().getFullYear()} MAKE IT SELF. All rights reserved.
+          &copy; {new Date().getFullYear()} MAKE IT SELF. {t('footer.copyright')}
         </div>
       </div>
     </footer>
