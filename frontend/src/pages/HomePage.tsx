@@ -157,7 +157,7 @@ export default function HomePage() {
               {bestOfFiltered.map((product) => {
                 const hints = getProductTierHints(Number(product.discount_tier1_percent) || 0, Number(product.discount_tier2_percent) || 0);
                 return (
-                <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
+                <div key={product.id} className="card p-5 group hover:shadow-xl transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
                     <div className="bg-white rounded-sm mb-4 border border-gray-100 product-img-container">
                       {product.image_url ? (
@@ -231,7 +231,7 @@ export default function HomePage() {
               {paginatedProducts.map((product) => {
                 const hints = getProductTierHints(Number(product.discount_tier1_percent) || 0, Number(product.discount_tier2_percent) || 0);
                 return (
-                <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
+                <div key={product.id} className="card p-5 group hover:shadow-xl transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
                     <div className="bg-white rounded-sm mb-4 border border-gray-100 product-img-container">
                       {product.image_url ? (

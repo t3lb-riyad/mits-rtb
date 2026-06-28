@@ -106,7 +106,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'footer.contact': 'Contact',
     'footer.info': 'Information',
     'footer.copyright': 'All rights reserved.',
-    'footer.phone_line': 'Phone: +213 652 21 21 37',
+    'footer.phone_line': 'Phone: +213 696 64 22 14',
     'footer.email_line': 'Email: makeitselfmits@gmail.com',
     'footer.location': 'Algeria - Setif',
     'footer.map_link': 'View on Google Maps',
