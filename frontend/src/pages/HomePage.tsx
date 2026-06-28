@@ -161,7 +161,7 @@ export default function HomePage() {
                   <Link to={`/product/${product.slug}`}>
                     <div className="bg-white rounded-sm mb-4 border border-gray-100 product-img-container">
                       {product.image_url ? (
-                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="p-2 product-img" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="product-img" />
                       ) : (
                         <span className="text-4xl text-primary font-bold">{product.name.charAt(0)}</span>
                       )}
@@ -235,7 +235,7 @@ export default function HomePage() {
                   <Link to={`/product/${product.slug}`}>
                     <div className="bg-white rounded-sm mb-4 border border-gray-100 product-img-container">
                       {product.image_url ? (
-                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="p-2 product-img" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="product-img" />
                       ) : (
                         <span className="text-4xl text-primary font-bold">{product.name.charAt(0)}</span>
                       )}
