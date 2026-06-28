@@ -4,7 +4,6 @@ const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { initDatabase, prepare, exec } = require('./models/database');
-const { IMGBB_API_KEY } = require('./utils/storage');
 
 let app, server;
 
@@ -29,9 +28,21 @@ const { authenticateToken } = require('./middleware/auth');
     credentials: true
   }));
   app.use(express.json({ limit: '50mb' }));
-  if (!IMGBB_API_KEY) {
-    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-  }
+  app.use('/uploads', (req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && CORS_ORIGINS.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    const ext = req.path.split('.').pop()?.toLowerCase();
+    const mimeMap = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', ico: 'image/x-icon', txt: 'text/plain', pdf: 'application/pdf' };
+    if (ext && mimeMap[ext]) {
+      res.setHeader('Content-Type', mimeMap[ext]);
+    }
+    next();
+  }, express.static(path.join(__dirname, 'uploads')));
 
   app.use('/api', apiLimiter);
   app.use('/api/products', productsRouter);

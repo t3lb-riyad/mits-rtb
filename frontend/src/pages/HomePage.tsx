@@ -159,9 +159,9 @@ export default function HomePage() {
                 return (
                 <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
-                    <div className="bg-light rounded-sm h-48 flex items-center justify-center mb-4 overflow-hidden img-hover-zoom">
+                    <div className="bg-light rounded-sm mb-4 product-img-container">
                       {product.image_url ? (
-                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2 img-hover-zoom-img" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="p-2 product-img" />
                       ) : (
                         <span className="text-4xl text-primary font-bold">{product.name.charAt(0)}</span>
                       )}
@@ -233,9 +233,9 @@ export default function HomePage() {
                 return (
                 <div key={product.id} className="card p-5 group hover:shadow-md transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
-                    <div className="bg-white rounded-sm h-48 flex items-center justify-center mb-4 border border-gray-100 overflow-hidden img-hover-zoom">
+                    <div className="bg-white rounded-sm mb-4 border border-gray-100 product-img-container">
                       {product.image_url ? (
-                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="h-full w-full object-contain p-2 img-hover-zoom-img" />
+                        <img src={resolveImageUrl(product.image_url)} alt={product.name} className="p-2 product-img" />
                       ) : (
                         <span className="text-4xl text-primary font-bold">{product.name.charAt(0)}</span>
                       )}
