@@ -46,41 +46,4 @@
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
-  .cd-spin {
-    animation: cd-spin 2s linear infinite;
-  }
-
-  @keyframes cd-crawl {
-    0%   { left: -20%; }
-    60%  { left: 55%; }
-    100% { left: 55%; }
-  }
-  .cd-disc {
-    animation: cd-crawl 2.8s ease-in-out forwards;
-  }
-
-  @keyframes typewriter {
-    from { width: 0; }
-    to { width: 100%; }
-  }
-  @keyframes blink {
-    50% { border-color: transparent; }
-  }
-  .typewriter {
-    overflow: hidden;
-    white-space: nowrap;
-    border-right: 3px solid #fff;
-    width: 0;
-    animation:
-      typewriter 1.2s steps(12) 0.6s forwards,
-      blink 0.6s step-end 3;
-  }
-
-  @keyframes progress-fill {
-    from { width: 0%; }
-    to { width: 100%; }
-  }
-  .progress-bar-fill {
-    animation: progress-fill 2.6s ease-in-out forwards;
-  }
 }
