@@ -335,14 +335,66 @@ router.get('/products/:id/attributes', async (req, res) => {
 
 router.get('/analytics/profit', async (req, res) => {
   try {
-    const products = await prepare('SELECT * FROM products WHERE is_active = 1').all();
-    const productProfits = products.map(p => ({ ...p, profit: calculateProfit(p) }));
-    const totalExpenses = await prepare('SELECT COALESCE(SUM(amount), 0) as total FROM expenses').get();
     const totalRevenue = await prepare("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE order_status = 'delivered'").get();
-    const totalCosts = products.reduce((s, p) => s + (p.cost_price || 0), 0);
+    const totalExpenses = await prepare('SELECT COALESCE(SUM(amount), 0) as total FROM expenses').get();
     const totalOrders = await prepare('SELECT COUNT(*)::int as count FROM orders').get();
-    const netProfit = Number(totalRevenue.total) - totalCosts - Number(totalExpenses.total);
-    res.json({ summary: { totalRevenue: Number(totalRevenue.total), totalCosts, totalExpenses: Number(totalExpenses.total), netProfit, netMargin: Number(totalRevenue.total) > 0 ? parseFloat((netProfit / Number(totalRevenue.total) * 100).toFixed(2)) : 0, totalOrders: totalOrders.count }, products: productProfits });
+
+    const costRow = await prepare(`
+      SELECT
+        COALESCE(SUM(oi.quantity * COALESCE(p.cost_price, 0)), 0) as total_cogs,
+        COALESCE(SUM(oi.quantity * COALESCE(p.shipping_cost, 0)), 0) as total_shipping,
+        COALESCE(SUM(oi.quantity * COALESCE(p.ad_cost, 0)), 0) as total_ad,
+        COALESCE(SUM(oi.quantity * COALESCE(p.overhead_cost, 0)), 0) as total_overhead
+      FROM order_items oi
+      JOIN orders o ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      WHERE o.order_status = 'delivered'
+    `).get();
+
+    const totalCosts = Number(costRow.total_cogs) + Number(costRow.total_shipping) + Number(costRow.total_ad) + Number(costRow.total_overhead);
+    const revenue = Number(totalRevenue.total);
+    const expenses = Number(totalExpenses.total);
+    const netProfit = revenue - totalCosts - expenses;
+
+    const products = await prepare(`
+      SELECT
+        p.id, p.name, p.base_price, p.cost_price, p.shipping_cost, p.ad_cost, p.overhead_cost,
+        COALESCE(SUM(oi.quantity), 0)::int as units_sold
+      FROM products p
+      LEFT JOIN order_items oi ON oi.product_id = p.id
+      LEFT JOIN orders o ON o.id = oi.order_id AND o.order_status = 'delivered'
+      WHERE p.is_active = 1
+      GROUP BY p.id, p.name, p.base_price, p.cost_price, p.shipping_cost, p.ad_cost, p.overhead_cost
+      ORDER BY p.name
+    `).all();
+
+    const productProfits = products.map(p => {
+      const usd = Number(p.units_sold);
+      const rev = Number(p.base_price) * usd;
+      const cogs = (Number(p.cost_price) + Number(p.shipping_cost) + Number(p.ad_cost) + Number(p.overhead_cost)) * usd;
+      const np = rev - cogs;
+      return {
+        ...p,
+        profit: {
+          revenue: rev,
+          totalCosts: cogs,
+          netProfit: np,
+          profitMargin: rev > 0 ? ((np / rev) * 100).toFixed(2) : 0,
+        }
+      };
+    });
+
+    res.json({
+      summary: {
+        totalRevenue: revenue,
+        totalCosts,
+        totalExpenses: expenses,
+        netProfit,
+        netMargin: revenue > 0 ? parseFloat(((netProfit / revenue) * 100).toFixed(2)) : 0,
+        totalOrders: totalOrders.count,
+      },
+      products: productProfits,
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

@@ -9,7 +9,7 @@ router.post('/', orderLimiter, async (req, res) => {
   try {
     let { customer_name, customer_phone, customer_email, customer_address, customer_city, customer_province,
       items, product_id, product_name, quantity, unit_price, shipping_method, shipping_office_id, shipping_office_name, notes, attributes,
-      selected_ram, selected_storage, selected_hdd, discount_percent, discount_amount, total_amount: bodyTotalAmount } = req.body;
+      selected_ram, selected_storage, selected_hdd, discount_percent, discount_amount, total_amount: bodyTotalAmount, delivery_fee } = req.body;
     const sanitized = sanitizeInput({ customer_name, customer_email, customer_address, notes }, ['customer_name', 'customer_email', 'customer_address', 'notes']);
     customer_name = sanitized.customer_name; customer_email = sanitized.customer_email;
     customer_address = sanitized.customer_address; notes = sanitized.notes;
@@ -80,14 +80,14 @@ router.post('/', orderLimiter, async (req, res) => {
       INSERT INTO orders (order_number, customer_id, customer_phone, customer_name, customer_email,
         customer_address, customer_city, customer_province, product_id, product_name,
         quantity, unit_price, total_amount, item_count, shipping_method, shipping_office_id,
-        shipping_office_name, notes, order_status, is_fraud_flagged, discount_percent, discount_amount)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'pending', $19, $20, $21)
+        shipping_office_name, notes, order_status, is_fraud_flagged, discount_percent, discount_amount, delivery_fee)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'pending', $19, $20, $21, $22)
     `).run(orderNum, customer.id, phone, customer_name, customer_email || null,
       customer_address || null, customer_city || null, customer_province || null,
       firstItem.product_id || null, firstItem.product_name || null,
       firstItem.quantity || 1, firstItem.unit_price || 0, totalAmount, itemCount,
       shipping_method, shipping_office_id || null, shipping_office_name || null,
-      notes || null, isFraudFlagged || isSpam, discPct, discAmt);
+      notes || null, isFraudFlagged || isSpam, discPct, discAmt, Number(delivery_fee) || 0);
 
     const newOrder = await prepare('SELECT id FROM orders WHERE order_number = $1').get(orderNum);
 

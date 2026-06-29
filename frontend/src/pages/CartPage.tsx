@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart, getProductDiscountPercent } from '../context/CartContext';
 import { useTranslation } from '../i18n/LanguageContext';
-import { api } from '../utils/api';
+import { api, API_BASE } from '../utils/api';
 
 const ALGERIAN_WILAYAS = [
   'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira',
@@ -14,12 +14,16 @@ const ALGERIAN_WILAYAS = [
   'Timimoun','Touggourt','Djanet','In Salah','In Guezzam',
 ];
 
+const BASE_URL = API_BASE.replace(/\/api$/, '');
+
 export default function CartPage() {
   const { t } = useTranslation();
   const { items, removeItem, updateQuantity, clearCart, totalPrice, totalItems, discountPercent, discountAmount, finalTotal } = useCart();
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<any>(null);
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [deliveryFeeLoading, setDeliveryFeeLoading] = useState(false);
 
   const [form, setForm] = useState({
     customer_name: '', customer_phone: '', customer_email: '',
@@ -27,6 +31,17 @@ export default function CartPage() {
     shipping_method: 'home_delivery', notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!form.customer_province) { setDeliveryFee(null); return; }
+    const method = form.shipping_method === 'home_delivery' ? 'home_delivery_fee' : 'office_pickup_fee';
+    setDeliveryFeeLoading(true);
+    fetch(`${BASE_URL}/api/delivery/fees/${encodeURIComponent(form.customer_province)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setDeliveryFee(data ? Number(data[method]) || 0 : null))
+      .catch(() => setDeliveryFee(null))
+      .finally(() => setDeliveryFeeLoading(false));
+  }, [form.customer_province, form.shipping_method]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -57,13 +72,15 @@ export default function CartPage() {
         selected_storage: i.selectedStorage,
         selected_hdd: i.selectedHdd,
       }));
+      const fee = deliveryFee || 0;
       const payload = {
         ...form,
         customer_phone: form.customer_phone.replace(/[\s\-\(\)]/g, ''),
         items: cartItems,
         discount_percent: discountPercent,
         discount_amount: Math.round(discountAmount),
-        total_amount: Math.round(finalTotal),
+        total_amount: Math.round(finalTotal + fee),
+        delivery_fee: fee,
       };
       const res = await api.post<{ success: boolean; order_number: string }>('/orders', payload);
       setOrderResult(res);
@@ -102,6 +119,8 @@ export default function CartPage() {
       </div>
     );
   }
+
+  const grandTotal = finalTotal + (deliveryFee || 0);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -159,19 +178,37 @@ export default function CartPage() {
               <span className="text-green-800 font-semibold text-sm">{t('cart.bulk_discount_line', String(discountPercent))}</span>
               <span className="text-green-700 font-bold">-{Math.round(discountAmount).toLocaleString()} DA</span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-green-200">
-              <span className="text-green-900 font-bold text-lg">{t('cart.total_to_pay')}</span>
-              <span className="text-green-900 font-bold text-xl">{Math.round(finalTotal).toLocaleString()} DA</span>
-            </div>
           </div>
         )}
 
-        {discountPercent === 0 && (
-          <div className="flex justify-between items-center">
-            <span className="font-bold text-lg text-dark">{t('product.total')}</span>
-            <span className="font-bold text-primary text-2xl">{Math.round(totalPrice).toLocaleString()} DA</span>
+        <div className="border-t border-gray-100 pt-4 mt-4 space-y-2">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-gray-600">{t('cart.delivery_fee')}</span>
+            <span className="font-medium">
+              {!form.customer_province ? (
+                <span className="text-gray-400 text-xs">{t('cart.select_province_fee')}</span>
+              ) : deliveryFeeLoading ? (
+                <span className="text-gray-400">{t('loading')}</span>
+              ) : deliveryFee === 0 || deliveryFee === null ? (
+                <span className="text-green-600">{t('cart.delivery_fee_free')}</span>
+              ) : (
+                <span>{Math.round(deliveryFee).toLocaleString()} DA</span>
+              )}
+            </span>
           </div>
-        )}
+
+          {discountPercent > 0 ? (
+            <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+              <span className="font-bold text-lg text-dark">{t('cart.total_with_delivery')}</span>
+              <span className="font-bold text-primary text-xl">{Math.round(grandTotal).toLocaleString()} DA</span>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-lg text-dark">{t('product.total')}</span>
+              <span className="font-bold text-primary text-2xl">{Math.round(grandTotal).toLocaleString()} DA</span>
+            </div>
+          )}
+        </div>
 
         {items.some(i => {
           const pct = getProductDiscountPercent(i.quantity, i.discountTier1Percent, i.discountTier2Percent);
@@ -254,7 +291,7 @@ export default function CartPage() {
             </div>
             <div className="sm:col-span-2 flex gap-4">
               <button type="submit" disabled={submitting} className="btn-primary text-lg px-8 py-3">
-                {submitting ? t('product.processing') : t('product.place_order')}
+                {submitting ? t('product.processing') : `${t('product.place_order')} (${Math.round(grandTotal).toLocaleString()} DA)`}
               </button>
               <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
             </div>

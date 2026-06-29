@@ -331,6 +331,59 @@ async function initDatabase() {
   await exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_tier1_percent NUMERIC DEFAULT 0`);
   await exec(`ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_tier2_percent NUMERIC DEFAULT 0`);
   await exec('CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)');
+  await exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_fee NUMERIC DEFAULT 0");
+
+  await exec(`
+    CREATE TABLE IF NOT EXISTS delivery_fees (
+      id SERIAL PRIMARY KEY,
+      province TEXT UNIQUE NOT NULL,
+      home_delivery_fee NUMERIC DEFAULT 0,
+      office_pickup_fee NUMERIC DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      id SERIAL PRIMARY KEY,
+      key TEXT UNIQUE NOT NULL,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  const langRow = await prepare("SELECT COUNT(*)::int as c FROM app_settings WHERE key = 'system_language'").get();
+  if (langRow && langRow.c === 0) {
+    await prepare("INSERT INTO app_settings (key, value) VALUES ($1, $2)").run('system_language', 'fr');
+  }
+
+  const provCount = await prepare('SELECT COUNT(*)::int as c FROM delivery_fees').get();
+  if (provCount && provCount.c === 0) {
+    const provinces = [
+      ['Adrar', 800, 400], ['Chlef', 600, 300], ['Laghouat', 700, 350], ['Oum El Bouaghi', 600, 300],
+      ['Batna', 600, 300], ['Béjaïa', 600, 300], ['Biskra', 700, 350], ['Béchar', 1200, 600],
+      ['Blida', 500, 250], ['Bouira', 600, 300], ['Tamanrasset', 1500, 800], ['Tébessa', 700, 350],
+      ['Tlemcen', 800, 400], ['Tiaret', 700, 350], ['Tizi Ouzou', 600, 300], ['Algiers', 400, 200],
+      ['Djelfa', 700, 350], ['Jijel', 600, 300], ['Sétif', 600, 300], ['Saïda', 700, 350],
+      ['Skikda', 600, 300], ['Sidi Bel Abbès', 700, 350], ['Annaba', 600, 300], ['Guelma', 600, 300],
+      ['Constantine', 500, 250], ['Médéa', 500, 250], ['Mostaganem', 700, 350], ["M'Sila", 600, 300],
+      ['Mascara', 700, 350], ['Ouargla', 900, 450], ['Oran', 700, 350], ['El Bayadh', 900, 450],
+      ['Illizi', 1500, 800], ['Bordj Bou Arréridj', 600, 300], ['Boumerdès', 500, 250],
+      ['El Tarf', 600, 300], ['Tindouf', 1800, 900], ['Tissemsilt', 700, 350], ['El Oued', 800, 400],
+      ['Khenchela', 700, 350], ['Souk Ahras', 700, 350], ['Tipaza', 500, 250], ['Mila', 600, 300],
+      ['Aïn Defla', 600, 300], ['Naâma', 800, 400], ['Aïn Témouchent', 700, 350],
+      ['Ghardaïa', 800, 400], ['Relizane', 700, 350], ["El M'Ghair", 800, 400], ['El Meniaa', 900, 450],
+      ['Ouled Djellal', 700, 350], ['Bordj Baji Mokhtar', 2000, 1000], ['Béni Abbès', 1200, 600],
+      ['Timimoun', 1200, 600], ['Touggourt', 800, 400], ['Djanet', 1800, 900],
+      ['In Salah', 1500, 800], ['In Guezzam', 2000, 1000],
+    ];
+    for (const p of provinces) {
+      await prepare('INSERT INTO delivery_fees (province, home_delivery_fee, office_pickup_fee) VALUES ($1, $2, $3)').run(p[0], p[1], p[2]);
+    }
+  }
+
   initialized = true;
 }
 

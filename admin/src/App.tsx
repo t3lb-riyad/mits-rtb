@@ -3,7 +3,7 @@ import { adminApi, API_BASE, resolveImageUrl } from './utils/api';
 
 type Page = 'dashboard' | 'orders' | 'order-detail' | 'customers' | 'customer-detail'
   | 'products' | 'categories' | 'brands' | 'analytics' | 'inventory' | 'delayed' | 'exchanges'
-  | 'abandoned' | 'bulk-import' | 'settings' | 'expenses';
+  | 'abandoned' | 'bulk-import' | 'settings' | 'expenses' | 'delivery';
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('admin_token'));
@@ -68,6 +68,7 @@ export default function App() {
     { page: 'analytics', label: 'Analytics & Profit' },
     { page: 'expenses', label: 'Expenses' },
     { page: 'inventory', label: 'Inventory' },
+    { page: 'delivery', label: 'Delivery Fees' },
     { page: 'exchanges', label: 'Exchanges' },
     { page: 'abandoned', label: 'Abandoned Carts' },
     { page: 'bulk-import', label: 'Bulk Import' },
@@ -110,6 +111,7 @@ export default function App() {
           {page === 'exchanges' && <ExchangesPage />}
           {page === 'abandoned' && <AbandonedCartsPage />}
           {page === 'bulk-import' && <BulkImportPage />}
+          {page === 'delivery' && <DeliveryPage />}
           {page === 'settings' && <SettingsPage />}
         </div>
       </main>
@@ -1088,8 +1090,9 @@ function AnalyticsPage() {
           <thead className="bg-gray-50 text-left">
             <tr>
               <th className="px-4 py-3 font-medium text-gray-600">Product</th>
-              <th className="px-4 py-3 font-medium text-gray-600">Price</th>
-              <th className="px-4 py-3 font-medium text-gray-600">Cost</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Units Sold</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Revenue</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Cost (COGS)</th>
               <th className="px-4 py-3 font-medium text-gray-600">Net Profit</th>
               <th className="px-4 py-3 font-medium text-gray-600">Margin</th>
             </tr>
@@ -1098,8 +1101,9 @@ function AnalyticsPage() {
             {data.products.map((p: any) => (
               <tr key={p.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{p.name}</td>
+                <td className="px-4 py-3">{p.units_sold}</td>
                 <td className="px-4 py-3">{Math.round(p.profit.revenue).toLocaleString()} DA</td>
-                <td className="px-4 py-3">{Math.round(p.cost_price).toLocaleString()} DA</td>
+                <td className="px-4 py-3">{Math.round(p.profit.totalCosts).toLocaleString()} DA</td>
                 <td className={`px-4 py-3 font-medium ${p.profit.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {Math.round(p.profit.netProfit).toLocaleString()} DA
                 </td>
@@ -1226,6 +1230,88 @@ function DelayedShipmentsPage() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/* =================== DELIVERY =================== */
+function DeliveryPage() {
+  const [fees, setFees] = useState<any[]>([]);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editHome, setEditHome] = useState('');
+  const [editOffice, setEditOffice] = useState('');
+  const [search, setSearch] = useState('');
+  const load = () => { adminApi.get<{ fees: any[] }>('/delivery/admin/fees').then(r => setFees(r.fees)).catch(console.error); };
+  useEffect(load, []);
+
+  const saveFee = async (id: number) => {
+    try {
+      await adminApi.put(`/delivery/admin/fees/${id}`, { home_delivery_fee: editHome, office_pickup_fee: editOffice });
+      setEditId(null);
+      load();
+    } catch (err: any) { alert(err.message); }
+  };
+
+  const filtered = fees.filter(f => f.province.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-dark mb-6">Delivery Fee Management</h1>
+      <div className="card p-4 mb-4">
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          className="input-field max-w-sm" placeholder="Search province..." />
+      </div>
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-left">
+            <tr>
+              <th className="px-4 py-3 font-medium text-gray-600">Province</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Home Delivery (DA)</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Office Pickup (DA)</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Status</th>
+              <th className="px-4 py-3 font-medium text-gray-600">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filtered.map(f => (
+              <tr key={f.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium">{f.province}</td>
+                {editId === f.id ? (
+                  <>
+                    <td className="px-4 py-2">
+                      <input type="number" value={editHome} onChange={e => setEditHome(e.target.value)}
+                        className="input-field w-28" min="0" step="50" />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input type="number" value={editOffice} onChange={e => setEditOffice(e.target.value)}
+                        className="input-field w-28" min="0" step="50" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Active' : 'Inactive'}</span>
+                    </td>
+                    <td className="px-4 py-3 flex gap-2">
+                      <button onClick={() => saveFee(f.id)} className="btn-primary text-xs px-3 py-1">Save</button>
+                      <button onClick={() => setEditId(null)} className="btn-secondary text-xs px-3 py-1">Cancel</button>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="px-4 py-3">{Number(f.home_delivery_fee).toLocaleString()} DA</td>
+                    <td className="px-4 py-3">{Number(f.office_pickup_fee).toLocaleString()} DA</td>
+                    <td className="px-4 py-3">
+                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Active' : 'Inactive'}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button onClick={() => { setEditId(f.id); setEditHome(String(f.home_delivery_fee)); setEditOffice(String(f.office_pickup_fee)); }}
+                        className="text-primary text-sm font-medium hover:underline">Edit</button>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1611,8 +1697,13 @@ function BrandsPage() {
 function SettingsPage() {
   const [pixels, setPixels] = useState<any[]>([]);
   const [form, setForm] = useState({ pixel_type: 'facebook', pixel_id: '', access_token: '', event_type: 'Purchase' });
+  const [sysLang, setSysLang] = useState('fr');
+  const [langSaving, setLangSaving] = useState(false);
   const load = () => { adminApi.get<{ pixels: any[] }>('/settings').then(r => setPixels(r.pixels)).catch(console.error); };
   useEffect(load, []);
+  useEffect(() => {
+    adminApi.get<{ lang: string }>('/delivery/settings/language').then(r => { if (['ar', 'fr', 'en'].includes(r.lang)) setSysLang(r.lang); }).catch(() => {});
+  }, []);
 
   const addPixel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1625,9 +1716,45 @@ function SettingsPage() {
     catch { /* handle */ }
   };
 
+  const saveLanguage = async (lang: string) => {
+    setLangSaving(true);
+    try {
+      await adminApi.put('/delivery/settings/language', { lang });
+      setSysLang(lang);
+    } catch (err: any) { alert(err.message); }
+    finally { setLangSaving(false); }
+  };
+
+  const langOptions = [
+    { value: 'fr', label: 'Fran\u00e7ais' },
+    { value: 'ar', label: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' },
+    { value: 'en', label: 'English' },
+  ];
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-dark mb-6">Settings</h1>
+
+      <div className="card p-6 mb-6">
+        <h2 className="section-title mb-4">Language Settings</h2>
+        <p className="text-sm text-gray-500 mb-3">Set the default language displayed to all store visitors.</p>
+        <div className="flex flex-wrap gap-3">
+          {langOptions.map(o => (
+            <button key={o.value}
+              onClick={() => saveLanguage(o.value)}
+              disabled={langSaving || sysLang === o.value}
+              className={`px-5 py-2 rounded text-sm font-medium border transition-colors ${
+                sysLang === o.value
+                  ? 'bg-primary text-white border-primary'
+                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+              } disabled:opacity-60`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-2">Current default: <strong>{langOptions.find(o => o.value === sysLang)?.label || sysLang}</strong></p>
+      </div>
 
       <div className="card p-6 mb-6">
         <h2 className="section-title mb-4">Tracking Pixels</h2>

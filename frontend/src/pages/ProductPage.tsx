@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
 import { useCart, createCartItem, getProductDiscountPercent } from '../context/CartContext';
-import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
+import { api, resolveImageUrl, Product, ProductAttribute, API_BASE } from '../utils/api';
+
+const BASE_URL = API_BASE.replace(/\/api$/, '');
 
 const ALGERIAN_WILAYAS = [
   'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Biskra', 'Béchar',
@@ -45,6 +47,9 @@ export default function ProductPage() {
   const [orderNumber, setOrderNumber] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
+  const [deliveryFeeLoading, setDeliveryFeeLoading] = useState(false);
+
   const [form, setForm] = useState<CheckoutForm>({
     full_name: '',
     phone: '',
@@ -55,6 +60,17 @@ export default function ProductPage() {
     shipping_method: 'home_delivery',
     notes: '',
   });
+
+  useEffect(() => {
+    if (!form.province) { setDeliveryFee(null); return; }
+    const method = form.shipping_method === 'home_delivery' ? 'home_delivery_fee' : 'office_pickup_fee';
+    setDeliveryFeeLoading(true);
+    fetch(`${BASE_URL}/api/delivery/fees/${encodeURIComponent(form.province)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setDeliveryFee(data ? Number(data[method]) || 0 : null))
+      .catch(() => setDeliveryFee(null))
+      .finally(() => setDeliveryFeeLoading(false));
+  }, [form.province, form.shipping_method]);
 
   useEffect(() => {
     if (!slug) return;
@@ -146,6 +162,7 @@ export default function ProductPage() {
 
     setSubmitting(true);
     try {
+      const fee = deliveryFee || 0;
       const res = await api.post<{ success: boolean; order_number: string }>('/orders', {
         customer_name: form.full_name,
         customer_phone: form.phone,
@@ -160,9 +177,10 @@ export default function ProductPage() {
         shipping_method: form.shipping_method,
         attributes: selectedAttrs,
         notes: form.notes || null,
-        total_amount: Math.round(finalTotal),
+        total_amount: Math.round(finalTotal + fee),
         discount_percent: discountPct,
         discount_amount: Math.round(discountAmt),
+        delivery_fee: fee,
       });
       setOrderNumber(res.order_number);
       setSubmitted(true);
@@ -450,14 +468,28 @@ export default function ProductPage() {
                   </div>
                   <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-green-200 text-green-900">
                     <span>{t('product.final_price')}</span>
-                    <span>{formatPrice(finalTotal)}</span>
+                    <span>{formatPrice(finalTotal + (deliveryFee || 0))}</span>
                   </div>
                 </>
               )}
+              <div className="flex justify-between text-sm mt-2 pt-2 border-t border-gray-100">
+                <span className="text-gray-600">{t('cart.delivery_fee')}</span>
+                <span className="text-gray-700">
+                  {!form.province ? (
+                    <span className="text-gray-400 text-xs">{t('cart.select_province_fee')}</span>
+                  ) : deliveryFeeLoading ? (
+                    <span className="text-gray-400">{t('loading')}</span>
+                  ) : deliveryFee === 0 || deliveryFee === null ? (
+                    <span className="text-green-600">{t('cart.delivery_fee_free')}</span>
+                  ) : (
+                    formatPrice(deliveryFee)
+                  )}
+                </span>
+              </div>
               {discountPct === 0 && (
                 <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-gray-200">
                   <span>{t('product.total')}</span>
-                  <span className="text-primary">{formatPrice(totalPrice)}</span>
+                  <span className="text-primary">{formatPrice(totalPrice + (deliveryFee || 0))}</span>
                 </div>
               )}
               {quantity < 5 && t1p > 0 && (() => {
