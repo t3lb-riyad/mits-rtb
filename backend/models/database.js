@@ -345,20 +345,6 @@ async function initDatabase() {
     )
   `);
 
-  await exec(`
-    CREATE TABLE IF NOT EXISTS app_settings (
-      id SERIAL PRIMARY KEY,
-      key TEXT UNIQUE NOT NULL,
-      value TEXT NOT NULL,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  const langRow = await prepare("SELECT COUNT(*)::int as c FROM app_settings WHERE key = 'system_language'").get();
-  if (langRow && langRow.c === 0) {
-    await prepare("INSERT INTO app_settings (key, value) VALUES ($1, $2)").run('system_language', 'fr');
-  }
-
   const provCount = await prepare('SELECT COUNT(*)::int as c FROM delivery_fees').get();
   if (provCount && provCount.c === 0) {
     const provinces = [

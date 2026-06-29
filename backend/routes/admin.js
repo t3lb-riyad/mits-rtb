@@ -341,17 +341,22 @@ router.get('/analytics/profit', async (req, res) => {
 
     const costRow = await prepare(`
       SELECT
-        COALESCE(SUM(oi.quantity * COALESCE(p.cost_price, 0)), 0) as total_cogs,
-        COALESCE(SUM(oi.quantity * COALESCE(p.shipping_cost, 0)), 0) as total_shipping,
-        COALESCE(SUM(oi.quantity * COALESCE(p.ad_cost, 0)), 0) as total_ad,
-        COALESCE(SUM(oi.quantity * COALESCE(p.overhead_cost, 0)), 0) as total_overhead
+        COALESCE(SUM(COALESCE(oi.quantity, 0) * COALESCE(p.cost_price, 0)), 0) as total_cogs,
+        COALESCE(SUM(COALESCE(oi.quantity, 0) * COALESCE(p.shipping_cost, 0)), 0) as total_shipping,
+        COALESCE(SUM(COALESCE(oi.quantity, 0) * COALESCE(p.ad_cost, 0)), 0) as total_ad,
+        COALESCE(SUM(COALESCE(oi.quantity, 0) * COALESCE(p.overhead_cost, 0)), 0) as total_overhead,
+        COALESCE(SUM(COALESCE(oi.quantity, 0) * COALESCE(oi.unit_price, 0)), 0) as total_revenue_from_items
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
       LEFT JOIN products p ON oi.product_id = p.id
       WHERE o.order_status = 'delivered'
     `).get();
 
-    const totalCosts = Number(costRow.total_cogs) + Number(costRow.total_shipping) + Number(costRow.total_ad) + Number(costRow.total_overhead);
+    const cogs = Number(costRow.total_cogs);
+    const shippingCosts = Number(costRow.total_shipping);
+    const adCosts = Number(costRow.total_ad);
+    const overheadCosts = Number(costRow.total_overhead);
+    const totalCosts = cogs + shippingCosts + adCosts + overheadCosts;
     const revenue = Number(totalRevenue.total);
     const expenses = Number(totalExpenses.total);
     const netProfit = revenue - totalCosts - expenses;
@@ -359,27 +364,47 @@ router.get('/analytics/profit', async (req, res) => {
     const products = await prepare(`
       SELECT
         p.id, p.name, p.base_price, p.cost_price, p.shipping_cost, p.ad_cost, p.overhead_cost,
-        COALESCE(SUM(oi.quantity), 0)::int as units_sold
+        COALESCE(oi_summary.units_sold, 0)::int as units_sold,
+        COALESCE(oi_summary.total_revenue, 0) as total_revenue,
+        COALESCE(oi_summary.total_cogs, 0) as total_cogs,
+        COALESCE(oi_summary.total_shipping, 0) as total_shipping,
+        COALESCE(oi_summary.total_ad, 0) as total_ad,
+        COALESCE(oi_summary.total_overhead, 0) as total_overhead
       FROM products p
-      LEFT JOIN order_items oi ON oi.product_id = p.id
-      LEFT JOIN orders o ON o.id = oi.order_id AND o.order_status = 'delivered'
+      LEFT JOIN (
+        SELECT
+          oi.product_id,
+          SUM(COALESCE(oi.quantity, 0)) as units_sold,
+          SUM(COALESCE(oi.quantity, 0) * COALESCE(oi.unit_price, 0)) as total_revenue,
+          SUM(COALESCE(oi.quantity, 0) * COALESCE(p2.cost_price, 0)) as total_cogs,
+          SUM(COALESCE(oi.quantity, 0) * COALESCE(p2.shipping_cost, 0)) as total_shipping,
+          SUM(COALESCE(oi.quantity, 0) * COALESCE(p2.ad_cost, 0)) as total_ad,
+          SUM(COALESCE(oi.quantity, 0) * COALESCE(p2.overhead_cost, 0)) as total_overhead
+        FROM order_items oi
+        JOIN orders o ON o.id = oi.order_id AND o.order_status = 'delivered'
+        LEFT JOIN products p2 ON oi.product_id = p2.id
+        GROUP BY oi.product_id
+      ) oi_summary ON oi_summary.product_id = p.id
       WHERE p.is_active = 1
-      GROUP BY p.id, p.name, p.base_price, p.cost_price, p.shipping_cost, p.ad_cost, p.overhead_cost
       ORDER BY p.name
     `).all();
 
     const productProfits = products.map(p => {
       const usd = Number(p.units_sold);
-      const rev = Number(p.base_price) * usd;
-      const cogs = (Number(p.cost_price) + Number(p.shipping_cost) + Number(p.ad_cost) + Number(p.overhead_cost)) * usd;
-      const np = rev - cogs;
+      const rev = Number(p.total_revenue);
+      const pcogs = Number(p.total_cogs) + Number(p.total_shipping) + Number(p.total_ad) + Number(p.total_overhead);
+      const np = rev - pcogs;
       return {
-        ...p,
+        id: p.id,
+        name: p.name,
+        base_price: p.base_price,
+        cost_price: p.cost_price,
+        units_sold: usd,
         profit: {
           revenue: rev,
-          totalCosts: cogs,
+          totalCosts: pcogs,
           netProfit: np,
-          profitMargin: rev > 0 ? ((np / rev) * 100).toFixed(2) : 0,
+          profitMargin: rev > 0 ? parseFloat(((np / rev) * 100).toFixed(2)) : 0,
         }
       };
     });

@@ -1287,7 +1287,7 @@ function DeliveryPage() {
                         className="input-field w-28" min="0" step="50" />
                     </td>
                     <td className="px-4 py-3">
-                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Active' : 'Inactive'}</span>
+                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Available' : 'Unavailable'}</span>
                     </td>
                     <td className="px-4 py-3 flex gap-2">
                       <button onClick={() => saveFee(f.id)} className="btn-primary text-xs px-3 py-1">Save</button>
@@ -1299,7 +1299,7 @@ function DeliveryPage() {
                     <td className="px-4 py-3">{Number(f.home_delivery_fee).toLocaleString()} DA</td>
                     <td className="px-4 py-3">{Number(f.office_pickup_fee).toLocaleString()} DA</td>
                     <td className="px-4 py-3">
-                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Active' : 'Inactive'}</span>
+                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Available' : 'Unavailable'}</span>
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => { setEditId(f.id); setEditHome(String(f.home_delivery_fee)); setEditOffice(String(f.office_pickup_fee)); }}
@@ -1697,13 +1697,8 @@ function BrandsPage() {
 function SettingsPage() {
   const [pixels, setPixels] = useState<any[]>([]);
   const [form, setForm] = useState({ pixel_type: 'facebook', pixel_id: '', access_token: '', event_type: 'Purchase' });
-  const [sysLang, setSysLang] = useState('fr');
-  const [langSaving, setLangSaving] = useState(false);
   const load = () => { adminApi.get<{ pixels: any[] }>('/settings').then(r => setPixels(r.pixels)).catch(console.error); };
   useEffect(load, []);
-  useEffect(() => {
-    adminApi.get<{ lang: string }>('/delivery/settings/language').then(r => { if (['ar', 'fr', 'en'].includes(r.lang)) setSysLang(r.lang); }).catch(() => {});
-  }, []);
 
   const addPixel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1716,45 +1711,9 @@ function SettingsPage() {
     catch { /* handle */ }
   };
 
-  const saveLanguage = async (lang: string) => {
-    setLangSaving(true);
-    try {
-      await adminApi.put('/delivery/settings/language', { lang });
-      setSysLang(lang);
-    } catch (err: any) { alert(err.message); }
-    finally { setLangSaving(false); }
-  };
-
-  const langOptions = [
-    { value: 'fr', label: 'Fran\u00e7ais' },
-    { value: 'ar', label: '\u0627\u0644\u0639\u0631\u0628\u064a\u0629' },
-    { value: 'en', label: 'English' },
-  ];
-
   return (
     <div>
       <h1 className="text-2xl font-bold text-dark mb-6">Settings</h1>
-
-      <div className="card p-6 mb-6">
-        <h2 className="section-title mb-4">Language Settings</h2>
-        <p className="text-sm text-gray-500 mb-3">Set the default language displayed to all store visitors.</p>
-        <div className="flex flex-wrap gap-3">
-          {langOptions.map(o => (
-            <button key={o.value}
-              onClick={() => saveLanguage(o.value)}
-              disabled={langSaving || sysLang === o.value}
-              className={`px-5 py-2 rounded text-sm font-medium border transition-colors ${
-                sysLang === o.value
-                  ? 'bg-primary text-white border-primary'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              } disabled:opacity-60`}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-gray-400 mt-2">Current default: <strong>{langOptions.find(o => o.value === sysLang)?.label || sysLang}</strong></p>
-      </div>
 
       <div className="card p-6 mb-6">
         <h2 className="section-title mb-4">Tracking Pixels</h2>

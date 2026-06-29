@@ -42,29 +42,4 @@ router.put('/admin/fees/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.put('/admin/settings/language', authenticateToken, async (req, res) => {
-  try {
-    const { lang } = req.body;
-    if (!['ar', 'fr', 'en'].includes(lang)) return res.status(400).json({ error: 'Invalid language. Must be ar, fr, or en.' });
-    const existing = await prepare("SELECT id FROM app_settings WHERE key = 'system_language'").get();
-    if (existing) {
-      await prepare("UPDATE app_settings SET value = $1, updated_at = CURRENT_TIMESTAMP WHERE key = 'system_language'").run(lang);
-    } else {
-      await prepare("INSERT INTO app_settings (key, value) VALUES ($1, $2)").run('system_language', lang);
-    }
-    res.json({ success: true, lang });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.get('/settings/language', async (req, res) => {
-  try {
-    const row = await prepare("SELECT value FROM app_settings WHERE key = 'system_language'").get();
-    res.json({ lang: row ? row.value : 'fr' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 module.exports = router;

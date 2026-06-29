@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Lang, translations } from './translations';
-import { API_BASE } from '../utils/api';
 
 interface LanguageContextType {
   lang: Lang;
@@ -17,33 +16,17 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Lang>('fr');
-  const [ready, setReady] = useState(false);
+  const [lang, setLang] = useState<Lang>(() => {
+    const saved = localStorage.getItem('lang');
+    if (saved === 'ar' || saved === 'fr' || saved === 'en') return saved;
+    return 'fr';
+  });
 
   useEffect(() => {
-    const saved = localStorage.getItem('lang') as Lang | null;
-    if (saved && (saved === 'ar' || saved === 'fr' || saved === 'en')) {
-      setLang(saved);
-      setReady(true);
-      return;
-    }
-    const base = API_BASE.replace(/\/api$/, '');
-    fetch(`${base}/api/config`)
-      .then(r => r.json())
-      .then(cfg => {
-        const sysLang = (cfg.default_language === 'ar' || cfg.default_language === 'en') ? cfg.default_language : 'fr';
-        setLang(sysLang);
-      })
-      .catch(() => setLang('fr'))
-      .finally(() => setReady(true));
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
     localStorage.setItem('lang', lang);
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  }, [lang, ready]);
+  }, [lang]);
 
   const t = (key: string, ...args: string[]): string => {
     let val = translations[lang]?.[key] ?? translations.en?.[key] ?? key;

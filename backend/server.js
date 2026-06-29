@@ -60,14 +60,12 @@ const { authenticateToken } = require('./middleware/auth');
   app.use('/api/admin', adminRouter);
   app.use('/api/delivery', deliveryRouter);
 
-  app.get('/api/config', async (req, res) => {
-    const langRow = await prepare("SELECT value FROM app_settings WHERE key = 'system_language'").get().catch(() => null);
+  app.get('/api/config', (req, res) => {
     res.json({
       site_name: 'LA MAISON CD',
       site_tagline: 'Premium Laptop Store',
       currency: 'DZD',
       currency_symbol: 'DA',
-      default_language: langRow ? langRow.value : 'fr',
       support_phone: '+213 XXX XXX XXX',
       support_whatsapp: '+213 XXX XXX XXX',
       primary_color: '#22549E',
