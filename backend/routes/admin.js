@@ -335,7 +335,10 @@ router.get('/products/:id/attributes', async (req, res) => {
 
 router.get('/analytics/profit', async (req, res) => {
   try {
-    const totalRevenue = await prepare("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE order_status = 'delivered'").get();
+    const activeStatuses = ["'delivered'", "'confirmed'", "'shipped'"];
+    const statusFilter = activeStatuses.join(', ');
+
+    const totalRevenue = await prepare(`SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE order_status IN (${statusFilter})`).get();
     const totalExpenses = await prepare('SELECT COALESCE(SUM(amount), 0) as total FROM expenses').get();
     const totalOrders = await prepare('SELECT COUNT(*)::int as count FROM orders').get();
 
@@ -349,7 +352,7 @@ router.get('/analytics/profit', async (req, res) => {
       FROM order_items oi
       JOIN orders o ON o.id = oi.order_id
       LEFT JOIN products p ON oi.product_id = p.id
-      WHERE o.order_status = 'delivered'
+      WHERE o.order_status IN (${statusFilter})
     `).get();
 
     const cogs = Number(costRow.total_cogs);
@@ -381,7 +384,7 @@ router.get('/analytics/profit', async (req, res) => {
           SUM(COALESCE(oi.quantity, 0) * COALESCE(p2.ad_cost, 0)) as total_ad,
           SUM(COALESCE(oi.quantity, 0) * COALESCE(p2.overhead_cost, 0)) as total_overhead
         FROM order_items oi
-        JOIN orders o ON o.id = oi.order_id AND o.order_status = 'delivered'
+        JOIN orders o ON o.id = oi.order_id AND o.order_status IN (${statusFilter})
         LEFT JOIN products p2 ON oi.product_id = p2.id
         GROUP BY oi.product_id
       ) oi_summary ON oi_summary.product_id = p.id
@@ -420,6 +423,37 @@ router.get('/analytics/profit', async (req, res) => {
       },
       products: productProfits,
     });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/analytics/orders-status', async (req, res) => {
+  try {
+    const byStatus = await prepare(`SELECT COALESCE(order_status, 'unknown') as status, COUNT(*)::int as count FROM orders GROUP BY order_status ORDER BY status`).all();
+    const total = await prepare('SELECT COUNT(*)::int as c FROM orders').get();
+    const delivered = await prepare("SELECT COUNT(*)::int as c FROM orders WHERE order_status = 'delivered'").get();
+    const revenue = await prepare("SELECT COALESCE(SUM(total_amount), 0) as total FROM orders WHERE order_status = 'delivered'").get();
+    res.json({ total: total.c, delivered: delivered.c, revenue: revenue.total, byStatus });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.get('/delivery/fees', authenticateToken, async (req, res) => {
+  try {
+    const fees = await prepare('SELECT * FROM delivery_fees ORDER BY province').all();
+    res.json(fees);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+router.put('/delivery/fees/:id', authenticateToken, async (req, res) => {
+  try {
+    const { province, home_delivery_fee, office_pickup_fee, is_active } = req.body;
+    await prepare(`UPDATE delivery_fees SET
+      province = CASE WHEN $1::text IS NOT NULL AND $1::text != '' THEN $1 ELSE province END,
+      home_delivery_fee = $2, office_pickup_fee = $3,
+      is_active = $4, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5`)
+      .run(province || null, Number(home_delivery_fee) || 0, Number(office_pickup_fee) || 0,
+        is_active !== undefined ? (is_active ? 1 : 0) : 1, req.params.id);
+    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
