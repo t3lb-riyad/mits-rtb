@@ -808,7 +808,11 @@ function ProductsPage() {
               <input type="number" min="0" max="100" step="0.5" value={form.discount_tier2_percent} onChange={e => setForm(p => ({ ...p, discount_tier2_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Short Description (specs summary)</label>
+              <textarea value={form.short_description} onChange={e => setForm(p => ({ ...p, short_description: e.target.value }))} className="input-field" rows={2} />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Description (full details)</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} className="input-field" rows={2} />
             </div>
             <div>
@@ -988,7 +992,11 @@ function ProductsPage() {
                 <input type="number" min="0" max="100" step="0.5" value={editingProduct.discount_tier2_percent || 0} onChange={e => setEditingProduct(p => ({ ...p, discount_tier2_percent: parseFloat(e.target.value) || 0 }))} className="input-field" />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Short Description (specs summary)</label>
+                <textarea value={editingProduct.short_description || ''} onChange={e => setEditingProduct(p => ({ ...p, short_description: e.target.value }))} className="input-field" rows={2} />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Description (full details)</label>
                 <textarea value={editingProduct.description || ''} onChange={e => setEditingProduct(p => ({ ...p, description: e.target.value }))} className="input-field" rows={2} />
               </div>
               <div className="sm:col-span-2">
