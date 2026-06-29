@@ -22,22 +22,30 @@ async function safeParseJson(res: Response): Promise<any> {
   return res.json();
 }
 
+const REQUEST_TIMEOUT = 30000;
+
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
   const token = getToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${endpoint}`, { ...options, headers: { ...headers, ...options?.headers } });
-  if (!res.ok) {
-    const err = await safeParseJson(res).catch(() => ({ error: res.statusText }));
-    if (res.status === 401 || res.status === 403 || (err.error && (err.error.includes('token') || err.error.includes('expired')))) {
-      localStorage.removeItem('admin_token');
-      window.location.href = '/';
-      throw new Error('Session expired');
+  try {
+    const res = await fetch(`${API}${endpoint}`, { signal: controller.signal, ...options, headers: { ...headers, ...options?.headers } });
+    if (!res.ok) {
+      const err = await safeParseJson(res).catch(() => ({ error: res.statusText }));
+      if (res.status === 401 || res.status === 403 || (err.error && (err.error.includes('token') || err.error.includes('expired')))) {
+        localStorage.removeItem('admin_token');
+        window.location.href = '/';
+        throw new Error('Session expired');
+      }
+      throw new Error(err.error || `Request failed (${res.status})`);
     }
-    throw new Error(err.error || `Request failed (${res.status})`);
+    return safeParseJson(res);
+  } finally {
+    clearTimeout(timeout);
   }
-  return safeParseJson(res);
 }
 
 export const adminApi = {
