@@ -56,14 +56,7 @@ export default function ProductPage() {
         setProduct(res.product);
         setAttributes(res.attributes);
 
-        const attrMap: Record<string, string> = {};
-        const grouped: Record<string, string[]> = {};
-        res.attributes.forEach(a => {
-          if (!grouped[a.attribute_name]) grouped[a.attribute_name] = [];
-          if (!grouped[a.attribute_name].includes(a.attribute_value)) grouped[a.attribute_name].push(a.attribute_value);
-        });
-        Object.keys(grouped).forEach(key => { attrMap[key] = grouped[key][0]; });
-        setSelectedAttrs(attrMap);
+        setSelectedAttrs({});
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -243,9 +236,6 @@ export default function ProductPage() {
             );
           })()}
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-dark mb-2 sm:mb-3">{product.name}</h1>
-          {product.short_description && (
-            <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">{product.short_description}</p>
-          )}
           <p className="text-2xl sm:text-3xl font-bold text-primary mb-3 sm:mb-4">{formatPrice(product.base_price)}</p>
           {product.description && (
             <p className="text-xs sm:text-sm text-gray-700 leading-relaxed mb-4 sm:mb-6">{product.description}</p>
