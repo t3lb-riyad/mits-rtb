@@ -1242,7 +1242,7 @@ function DeliveryPage() {
     id: number; province: string; home_delivery_fee: string; office_pickup_fee: string; is_active: boolean;
   } | null>(null);
 
-  const load = () => { adminApi.get<{ fees: any[] }>('/delivery/admin/fees').then(r => setFees(r.fees)).catch(console.error); };
+  const load = () => { adminApi.get<any[]>('/delivery/fees').then(r => setFees(r)).catch(console.error); };
   useEffect(load, []);
 
   const openEdit = (f: any) => {
@@ -1257,7 +1257,7 @@ function DeliveryPage() {
   const saveFee = async () => {
     if (!modal) return;
     try {
-      await adminApi.put(`/delivery/admin/fees/${modal.id}`, {
+      await adminApi.put(`/delivery/fees/${modal.id}`, {
         province: modal.province,
         home_delivery_fee: modal.home_delivery_fee,
         office_pickup_fee: modal.office_pickup_fee,
