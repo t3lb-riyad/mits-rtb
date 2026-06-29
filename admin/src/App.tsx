@@ -1237,17 +1237,33 @@ function DelayedShipmentsPage() {
 /* =================== DELIVERY =================== */
 function DeliveryPage() {
   const [fees, setFees] = useState<any[]>([]);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [editHome, setEditHome] = useState('');
-  const [editOffice, setEditOffice] = useState('');
   const [search, setSearch] = useState('');
+  const [modal, setModal] = useState<{
+    id: number; province: string; home_delivery_fee: string; office_pickup_fee: string; is_active: boolean;
+  } | null>(null);
+
   const load = () => { adminApi.get<{ fees: any[] }>('/delivery/admin/fees').then(r => setFees(r.fees)).catch(console.error); };
   useEffect(load, []);
 
-  const saveFee = async (id: number) => {
+  const openEdit = (f: any) => {
+    setModal({
+      id: f.id, province: f.province,
+      home_delivery_fee: String(f.home_delivery_fee),
+      office_pickup_fee: String(f.office_pickup_fee),
+      is_active: !!f.is_active,
+    });
+  };
+
+  const saveFee = async () => {
+    if (!modal) return;
     try {
-      await adminApi.put(`/delivery/admin/fees/${id}`, { home_delivery_fee: editHome, office_pickup_fee: editOffice });
-      setEditId(null);
+      await adminApi.put(`/delivery/admin/fees/${modal.id}`, {
+        province: modal.province,
+        home_delivery_fee: modal.home_delivery_fee,
+        office_pickup_fee: modal.office_pickup_fee,
+        is_active: modal.is_active,
+      });
+      setModal(null);
       load();
     } catch (err: any) { alert(err.message); }
   };
@@ -1276,42 +1292,64 @@ function DeliveryPage() {
             {filtered.map(f => (
               <tr key={f.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium">{f.province}</td>
-                {editId === f.id ? (
-                  <>
-                    <td className="px-4 py-2">
-                      <input type="number" value={editHome} onChange={e => setEditHome(e.target.value)}
-                        className="input-field w-28" min="0" step="50" />
-                    </td>
-                    <td className="px-4 py-2">
-                      <input type="number" value={editOffice} onChange={e => setEditOffice(e.target.value)}
-                        className="input-field w-28" min="0" step="50" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Available' : 'Unavailable'}</span>
-                    </td>
-                    <td className="px-4 py-3 flex gap-2">
-                      <button onClick={() => saveFee(f.id)} className="btn-primary text-xs px-3 py-1">Save</button>
-                      <button onClick={() => setEditId(null)} className="btn-secondary text-xs px-3 py-1">Cancel</button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="px-4 py-3">{Number(f.home_delivery_fee).toLocaleString()} DA</td>
-                    <td className="px-4 py-3">{Number(f.office_pickup_fee).toLocaleString()} DA</td>
-                    <td className="px-4 py-3">
-                      <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Available' : 'Unavailable'}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => { setEditId(f.id); setEditHome(String(f.home_delivery_fee)); setEditOffice(String(f.office_pickup_fee)); }}
-                        className="text-primary text-sm font-medium hover:underline">Edit</button>
-                    </td>
-                  </>
-                )}
+                <td className="px-4 py-3">{Number(f.home_delivery_fee).toLocaleString()} DA</td>
+                <td className="px-4 py-3">{Number(f.office_pickup_fee).toLocaleString()} DA</td>
+                <td className="px-4 py-3">
+                  <span className={f.is_active ? 'badge-green' : 'badge-gray'}>{f.is_active ? 'Available' : 'Unavailable'}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <button onClick={() => openEdit(f)}
+                    className="text-primary text-sm font-medium hover:underline">Edit</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setModal(null)}>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-dark mb-4">Edit Province</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Province Name</label>
+                <input type="text" value={modal.province} onChange={e => setModal(p => ({ ...p, province: e.target.value }))}
+                  className="input-field" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Home Delivery (DA)</label>
+                  <input type="number" value={modal.home_delivery_fee} onChange={e => setModal(p => ({ ...p, home_delivery_fee: e.target.value }))}
+                    className="input-field" min="0" step="50" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Office Pickup (DA)</label>
+                  <input type="number" value={modal.office_pickup_fee} onChange={e => setModal(p => ({ ...p, office_pickup_fee: e.target.value }))}
+                    className="input-field" min="0" step="50" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="modal_status" checked={modal.is_active} onChange={() => setModal(p => ({ ...p, is_active: true }))} className="accent-primary" />
+                    <span className="text-sm font-medium text-green-600">Available</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="modal_status" checked={!modal.is_active} onChange={() => setModal(p => ({ ...p, is_active: false }))} className="accent-primary" />
+                    <span className="text-sm font-medium text-red-500">Unavailable</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 justify-end">
+              <button onClick={() => setModal(null)} className="btn-secondary px-4 py-2">Cancel</button>
+              <button onClick={saveFee} className="btn-primary px-4 py-2">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

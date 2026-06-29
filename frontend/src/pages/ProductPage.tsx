@@ -2,21 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
 import { useCart, createCartItem, getProductDiscountPercent } from '../context/CartContext';
-import { api, resolveImageUrl, Product, ProductAttribute, API_BASE } from '../utils/api';
-
-const BASE_URL = API_BASE.replace(/\/api$/, '');
-
-const ALGERIAN_WILAYAS = [
-  'Adrar', 'Chlef', 'Laghouat', 'Oum El Bouaghi', 'Batna', 'Béjaïa', 'Biskra', 'Béchar',
-  'Blida', 'Bouira', 'Tamanrasset', 'Tébessa', 'Tlemcen', 'Tiaret', 'Tizi Ouzou', 'Alger',
-  'Djelfa', 'Jijel', 'Sétif', 'Saïda', 'Skikda', 'Sidi Bel Abbès', 'Annaba', 'Guelma',
-  'Constantine', 'Médéa', 'Mostaganem', 'M\'Sila', 'Mascara', 'Ouargla', 'Oran',
-  'El Bayadh', 'Illizi', 'Bordj Bou Arréridj', 'Boumerdès', 'El Tarf', 'Tindouf',
-  'Tissemsilt', 'El Oued', 'Khenchela', 'Souk Ahras', 'Tipaza', 'Mila', 'Aïn Defla',
-  'Naâma', 'Aïn Témouchent', 'Ghardaïa', 'Relizane', 'Timimoun', 'Bordj Badji Mokhtar',
-  'Ouled Djellal', 'Béni Abbès', 'In Salah', 'In Guezzam', 'Touggourt', 'Djanet',
-  'El Me\'ghaier', 'El Meniaa'
-];
+import { api, resolveImageUrl, Product, ProductAttribute } from '../utils/api';
+import { ALGERIAN_WILAYAS, useDeliveryFee } from '../utils/delivery';
 
 interface CheckoutForm {
   full_name: string;
@@ -47,9 +34,6 @@ export default function ProductPage() {
   const [orderNumber, setOrderNumber] = useState('');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const [deliveryFeeLoading, setDeliveryFeeLoading] = useState(false);
-
   const [form, setForm] = useState<CheckoutForm>({
     full_name: '',
     phone: '',
@@ -61,16 +45,7 @@ export default function ProductPage() {
     notes: '',
   });
 
-  useEffect(() => {
-    if (!form.province) { setDeliveryFee(null); return; }
-    const method = form.shipping_method === 'home_delivery' ? 'home_delivery_fee' : 'office_pickup_fee';
-    setDeliveryFeeLoading(true);
-    fetch(`${BASE_URL}/api/delivery/fees/${encodeURIComponent(form.province)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setDeliveryFee(data ? Number(data[method]) || 0 : null))
-      .catch(() => setDeliveryFee(null))
-      .finally(() => setDeliveryFeeLoading(false));
-  }, [form.province, form.shipping_method]);
+  const { deliveryFee, deliveryFeeLoading } = useDeliveryFee(form.province, form.shipping_method);
 
   useEffect(() => {
     if (!slug) return;

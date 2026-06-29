@@ -2,19 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart, getProductDiscountPercent } from '../context/CartContext';
 import { useTranslation } from '../i18n/LanguageContext';
-import { api, API_BASE } from '../utils/api';
-
-const ALGERIAN_WILAYAS = [
-  'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira',
-  'Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Algiers','Djelfa','Jijel','Sétif','Saïda',
-  'Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','M\'Sila','Mascara',
-  'Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf',
-  'Tissemsilt','El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent',
-  'Ghardaïa','Relizane','El M\'Ghair','El Meniaa','Ouled Djellal','Bordj Baji Mokhtar','Béni Abbès',
-  'Timimoun','Touggourt','Djanet','In Salah','In Guezzam',
-];
-
-const BASE_URL = API_BASE.replace(/\/api$/, '');
+import { api } from '../utils/api';
+import { ALGERIAN_WILAYAS, useDeliveryFee } from '../utils/delivery';
 
 export default function CartPage() {
   const { t } = useTranslation();
@@ -22,8 +11,6 @@ export default function CartPage() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<any>(null);
-  const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
-  const [deliveryFeeLoading, setDeliveryFeeLoading] = useState(false);
 
   const [form, setForm] = useState({
     customer_name: '', customer_phone: '', customer_email: '',
@@ -32,16 +19,7 @@ export default function CartPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    if (!form.customer_province) { setDeliveryFee(null); return; }
-    const method = form.shipping_method === 'home_delivery' ? 'home_delivery_fee' : 'office_pickup_fee';
-    setDeliveryFeeLoading(true);
-    fetch(`${BASE_URL}/api/delivery/fees/${encodeURIComponent(form.customer_province)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setDeliveryFee(data ? Number(data[method]) || 0 : null))
-      .catch(() => setDeliveryFee(null))
-      .finally(() => setDeliveryFeeLoading(false));
-  }, [form.customer_province, form.shipping_method]);
+  const { deliveryFee, deliveryFeeLoading } = useDeliveryFee(form.customer_province, form.shipping_method);
 
   const validate = () => {
     const e: Record<string, string> = {};

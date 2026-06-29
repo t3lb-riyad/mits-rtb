@@ -33,9 +33,21 @@ router.get('/admin/fees', authenticateToken, async (req, res) => {
 
 router.put('/admin/fees/:id', authenticateToken, async (req, res) => {
   try {
-    const { home_delivery_fee, office_pickup_fee, is_active } = req.body;
-    await prepare("UPDATE delivery_fees SET home_delivery_fee = $1, office_pickup_fee = $2, is_active = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4")
-      .run(Number(home_delivery_fee) || 0, Number(office_pickup_fee) || 0, is_active !== undefined ? (is_active ? 1 : 0) : 1, req.params.id);
+    const { province, home_delivery_fee, office_pickup_fee, is_active } = req.body;
+    await prepare(`UPDATE delivery_fees SET
+      province = CASE WHEN $1::text IS NOT NULL AND $1::text != '' THEN $1 ELSE province END,
+      home_delivery_fee = $2,
+      office_pickup_fee = $3,
+      is_active = $4,
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5`)
+      .run(
+        province || null,
+        Number(home_delivery_fee) || 0,
+        Number(office_pickup_fee) || 0,
+        is_active !== undefined ? (is_active ? 1 : 0) : 1,
+        req.params.id
+      );
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
