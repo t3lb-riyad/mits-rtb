@@ -51,6 +51,7 @@ const { authenticateToken } = require('./middleware/auth');
     res.status(200).send(placeholder);
   });
 
+  app.get('/ping', (req, res) => res.status(200).send('pong'));
   app.use('/api', apiLimiter);
   app.use('/api/products', productsRouter);
   app.use('/api/categories', categoriesRouter);

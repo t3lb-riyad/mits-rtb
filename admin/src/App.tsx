@@ -12,6 +12,10 @@ export default function App() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
 
+  useEffect(() => {
+    fetch(API_BASE.replace('/api/admin', '/ping')).catch(() => {});
+  }, []);
+
   if (!token) {
     const handleLogin = async (e: React.FormEvent) => {
       e.preventDefault();
