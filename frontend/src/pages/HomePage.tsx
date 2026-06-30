@@ -169,6 +169,9 @@ export default function HomePage() {
                   </Link>
                   <div className="mt-auto">
                     <span className="text-lg font-bold text-primary block mb-1">{formatPrice(Number(product.base_price))}</span>
+                    {product.short_description && (
+                      <p className="text-xs text-gray-500 mb-2 leading-relaxed">{product.short_description}</p>
+                    )}
                     <div className="mb-3">
                       {product.stock_quantity === 0 ? (
                         <span className="text-xs text-red-600 font-medium">{t('product.out_of_stock')}</span>
@@ -247,6 +250,9 @@ export default function HomePage() {
                   </Link>
                   <div className="mt-auto">
                     <span className="text-lg font-bold text-primary block mb-1">{formatPrice(Number(product.base_price))}</span>
+                    {product.short_description && (
+                      <p className="text-xs text-gray-500 mb-2 leading-relaxed">{product.short_description}</p>
+                    )}
                     <div className="mb-3">
                       {product.stock_quantity === 0 ? (
                         <span className="text-xs text-red-600 font-medium">{t('product.out_of_stock')}</span>
