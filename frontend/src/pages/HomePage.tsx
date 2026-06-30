@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
-import { useCart, createCartItem, getProductTierHints } from '../context/CartContext';
+import { useCart, createCartItem } from '../context/CartContext';
 import { api, resolveImageUrl, Product, Category } from '../utils/api';
 
 const BEST_OF_OPTIONS = ['study', 'work', 'gaming'] as const;
@@ -155,7 +155,6 @@ export default function HomePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {bestOfFiltered.map((product) => {
-                const hints = getProductTierHints(Number(product.discount_tier1_percent) || 0, Number(product.discount_tier2_percent) || 0);
                 return (
                 <div key={product.id} className="card p-5 group hover:shadow-xl transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
@@ -170,9 +169,14 @@ export default function HomePage() {
                   </Link>
                   <div className="mt-auto">
                     <span className="text-lg font-bold text-primary block mb-1">{formatPrice(Number(product.base_price))}</span>
-                    <div className="mb-3 space-y-0.5">
-                      {hints.tier1 && <span className="text-xs text-gray-400 block">{hints.tier1}</span>}
-                      {hints.tier2 && <span className="text-xs text-gray-400 block">{hints.tier2}</span>}
+                    <div className="mb-3">
+                      {product.stock_quantity === 0 ? (
+                        <span className="text-xs text-red-600 font-medium">{t('product.out_of_stock')}</span>
+                      ) : product.stock_quantity <= product.low_stock_threshold ? (
+                        <span className="text-xs text-orange-500 font-medium">{t('product.low_stock')}</span>
+                      ) : (
+                        <span className="text-xs text-green-600 font-medium">{t('product.in_stock')}</span>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => addItem(createCartItem(product))} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">
@@ -229,7 +233,6 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {paginatedProducts.map((product) => {
-                const hints = getProductTierHints(Number(product.discount_tier1_percent) || 0, Number(product.discount_tier2_percent) || 0);
                 return (
                 <div key={product.id} className="card p-5 group hover:shadow-xl transition-all flex flex-col">
                   <Link to={`/product/${product.slug}`}>
@@ -244,9 +247,14 @@ export default function HomePage() {
                   </Link>
                   <div className="mt-auto">
                     <span className="text-lg font-bold text-primary block mb-1">{formatPrice(Number(product.base_price))}</span>
-                    <div className="mb-3 space-y-0.5">
-                      {hints.tier1 && <span className="text-xs text-gray-400 block">{hints.tier1}</span>}
-                      {hints.tier2 && <span className="text-xs text-gray-400 block">{hints.tier2}</span>}
+                    <div className="mb-3">
+                      {product.stock_quantity === 0 ? (
+                        <span className="text-xs text-red-600 font-medium">{t('product.out_of_stock')}</span>
+                      ) : product.stock_quantity <= product.low_stock_threshold ? (
+                        <span className="text-xs text-orange-500 font-medium">{t('product.low_stock')}</span>
+                      ) : (
+                        <span className="text-xs text-green-600 font-medium">{t('product.in_stock')}</span>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button onClick={() => addItem(createCartItem(product))} className="flex-1 bg-primary text-white border-2 border-primary text-sm font-medium py-2 rounded hover:bg-white hover:text-primary transition-colors">

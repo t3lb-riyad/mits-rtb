@@ -259,6 +259,28 @@ export default function ProductPage() {
               {t('product.call_us')}
             </a>
           </div>
+
+          {/* Specifications */}
+          {attributes.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-base sm:text-lg font-bold text-dark mb-3 uppercase tracking-wider">{t('product.specifications')}</h2>
+              <div className="border border-gray-200 divide-y divide-gray-200 rounded-sm">
+                {(() => {
+                  const grouped: Record<string, string[]> = {};
+                  attributes.forEach(a => {
+                    if (!grouped[a.attribute_name]) grouped[a.attribute_name] = [];
+                    if (!grouped[a.attribute_name].includes(a.attribute_value)) grouped[a.attribute_name].push(a.attribute_value);
+                  });
+                  return Object.entries(grouped).map(([name, values]) => (
+                    <div key={name} className="flex px-4 py-2.5 even:bg-gray-50">
+                      <span className="w-1/3 text-xs sm:text-sm font-medium text-gray-600 capitalize">{name}</span>
+                      <span className="w-2/3 text-xs sm:text-sm text-gray-800">{values.join(', ')}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Order Form */}
