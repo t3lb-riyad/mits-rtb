@@ -25,7 +25,7 @@ const { authenticateToken } = require('./middleware/auth');
   app = express();
   const PORT = process.env.PORT || 3001;
 
-  const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'https://mits-rtb-frontend.onrender.com,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000').split(',');
+  const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'https://lamaison-cd.vercel.app,https://mits-rtb-frontend.onrender.com,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:3000').split(',');
   app.use(cors({
     origin: CORS_ORIGINS,
     credentials: true
